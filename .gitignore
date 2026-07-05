@@ -1,0 +1,9 @@
+# Files
+*.env
+*.log
+database.db
+stuff.txt
+
+# Folders
+__pycache__/
+.vscode/

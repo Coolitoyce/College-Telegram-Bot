@@ -1,0 +1,251 @@
+from config import bot
+from telebot.types import CallbackQuery, InputMediaDocument
+from dataclasses import dataclass
+from keyboards import courses, materials as materials_kb, primary
+import logging
+import database
+from asyncio import sleep
+#=====================
+logger = logging.getLogger("coolig_bot")
+
+#=====================
+# State Management
+@dataclass
+class UserState:
+    year: int | None = None
+    semester: int | None = None
+    department: str | None = None
+    course_id: int | None = None
+    material: str | None = None
+
+user_states: dict[int, UserState] = {}
+
+#=====================
+# Year Handler
+@bot.callback_query_handler(func=lambda c: c.data.startswith("year"))
+async def year_handler(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+    
+    year = int(call.data.split(":")[1])
+    state = user_states.setdefault(call.from_user.id, UserState())
+    try:
+        state.year = year
+
+    except Exception as e:
+        logger.error(f"Failed to update user's year: {e}")
+
+    years = ["المستوى الأول", "المستوى الثاني", "المستوى الثالث", "المستوى الرابع"]
+    year_text = years[year-1]
+    if year >= 3:
+        await bot.edit_message_text(
+            f"لقد اخترت *{year_text}*\n---\nاختر القسم",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=primary.dept_markup,
+            parse_mode="Markdown"
+        )
+
+    else:
+        await bot.edit_message_text(
+            f"لقد اخترت *{year_text}*\n---\nاختر الترم",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=primary.semester_markup,
+            parse_mode="Markdown"
+        )
+
+
+#=====================
+# Semester Handler
+@bot.callback_query_handler(func=lambda c: c.data.startswith("sem"))
+async def semester_handler(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+    
+    semester = int(call.data.split(":")[1])
+    state = user_states.setdefault(call.from_user.id, UserState())
+    try:
+        state.semester = semester
+
+    except Exception as e:
+        logger.error(f"Failed to update user's semester: {e}")
+
+    try:
+        year = int(state.year)
+
+    except Exception as e:
+        logging.error(e)
+    
+    if year == 1:
+        if semester == 1:
+            markup = courses.year1_sem1_markup
+            sem = "الأول"
+
+        elif semester == 2:
+            markup = courses.year1_sem2_markup
+            sem = "الثاني"
+     
+    elif year == 2:
+        if semester == 1:
+            markup = courses.year2_sem1_markup
+            sem = "الأول"
+
+        elif semester == 2:
+            markup = courses.year2_sem2_markup
+            sem = "الثاني"
+
+    else:
+        markup = primary.back_markup
+        return await bot.edit_message_text(
+            "لسه موصلتش السنة دي 😛",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=markup,
+            parse_mode="Markdown"
+        )  
+    
+    await bot.edit_message_text(
+        f"لقد اخترت *الترم {sem}*\n---\nاختر المادة",
+        call.message.chat.id,
+        call.message.message_id,
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
+
+#=====================
+# Department Handler
+@bot.callback_query_handler(func=lambda c: c.data.startswith("dept"))
+async def department_handler(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+    
+    dept = call.data.split(":")[1]
+    state = user_states.setdefault(call.from_user.id, UserState())
+    state.department = dept
+
+    await bot.edit_message_text(
+        f"لقد اخترت قسم *{dept.upper()}*\n---\nاختر الترم",
+        call.message.chat.id,
+        call.message.message_id,
+        reply_markup=primary.semester_markup,
+        parse_mode="Markdown"
+    )
+
+
+#=====================
+# Course Handler
+@bot.callback_query_handler(func= lambda c: c.data.startswith("course"))
+async def course_handler(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+    
+    course_id = int(call.data.split(":")[1])
+    state = user_states.setdefault(call.from_user.id, UserState())
+    state.course_id = course_id
+    semester = state.semester
+    course_name = await database.get_course_name(course_id)
+
+    await bot.edit_message_text(
+        f"لقد اخترت *{course_name}*\nاختر نوع الماتريال",
+        call.message.chat.id,
+        call.message.message_id,
+        reply_markup=materials_kb.materials_markup(semester),
+        parse_mode="Markdown"
+    )
+
+
+#=====================
+# Material Handler
+@bot.callback_query_handler(func = lambda c: c.data.startswith("material"))
+async def material_handler(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+    
+    material_type = (call.data.split(":")[1])
+    state = user_states.setdefault(call.from_user.id, UserState())
+    course_id = state.course_id
+ 
+    materials = await database.get_materials(course_id, material_type) # materials (id, course_id, title, type, file_id, uploaded_at)
+    media_group = []
+    for material in materials:
+        media_group.append(InputMediaDocument(material[4]))
+
+    if len(media_group) == 0:
+        logger.info(f"Tried sending material of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({call.from_user.username}) but couldn't find any.")
+        return await bot.edit_message_text(
+            "*مفيش ماتريال من النوع ده للمادة دي.* ❌",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=materials_kb.back_markup(course_id),
+            parse_mode="Markdown"
+        )
+    else:
+        await bot.edit_message_text(
+            "*تم إرسال الماتريال المطلوبة*\nللرجوع شوف الرسالة تحت الملفات ⬇️",
+            call.message.chat.id,
+            call.message.message_id,
+            parse_mode="Markdown"
+        )
+        
+    for i in range(0, len(media_group), 10):
+        await bot.send_media_group(
+            call.message.chat.id,
+            media_group[i:i+10]
+        )
+        await sleep(0.2)
+
+    logger.info(f"Sent materials of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({call.from_user.username})")
+    await bot.send_message(
+        call.message.chat.id,
+        "*What next?*",
+        reply_markup=materials_kb.back_markup(course_id),
+        parse_mode="Markdown"
+    )
+
+
+#=====================
+# Extra Resources (Videos) Handler
+@bot.callback_query_handler(func=lambda c: c.data.startswith("resource"))
+async def resource_handler(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+
+    state = user_states.setdefault(call.from_user.id, UserState)
+    course_id = state.course_id
+
+    resources = await database.get_resources(course_id) # resources (id, course_id, title, url, uploaded_at)
+
+    clean_resources = []
+    for resource in resources:
+        clean_resources.append((resource[2], resource[3])) # Append title and URL
+    
+    if len(clean_resources) == 0:
+        await bot.edit_message_text(
+            "*مفيش فيديوهات للمادة دي.* ❌",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=materials_kb.back_markup(course_id),
+            parse_mode="Markdown"
+        )
+
+    else:
+        markup = materials_kb.resources_markup(course_id, clean_resources)
+
+        await bot.edit_message_text(
+            "اختر من القائمة",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=markup,
+            parse_mode="Markdown"
+        )
+
+
+#=====================
+# General Handler
+@bot.callback_query_handler(func=lambda c: True)
+async def callback(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+
+    if call.data.startswith("home"):
+        await bot.edit_message_text(
+            "اختر الفرقة",
+            call.message.chat.id,
+            call.message.message_id,
+            reply_markup=primary.year_markup
+        )
