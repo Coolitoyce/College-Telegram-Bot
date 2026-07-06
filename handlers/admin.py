@@ -42,18 +42,21 @@ async def add_material(message: Message):
 
 
 #===========
-@bot.message_handler(content_types=['document'])
+@bot.message_handler(content_types=['document', 'video', 'photo'])
 async def add_material(message: Message):
     """Adds a new material to the database"""
-    if isadmin(message.from_user.id):
-        if message.caption is None:
-            await bot.reply_to(
-                message,
-                f"*Got it!*\n*File ID:*\n`{message.document.file_id}`",
-                parse_mode="Markdown"
-            )
+    if message.content_type == "video":
+        file_id = message.video.file_id
+        file_name = message.video.file_name
+    elif message.content_type == "photo":
+        file_id = message.photo.file_id
+        file_name = message.photo.file_name              
+    else:
+        file_id = message.document.file_id
+        file_name = message.document.file_name
 
-        elif message.caption.startswith('/add_material'):
+    if isadmin(message.from_user.id):
+        if message.caption is not None and message.caption.startswith('/add_material'):
             args = message.caption.split(maxsplit=1) 
             if len(args) != 2 or message.caption is None:
                 return await bot.reply_to(
@@ -68,9 +71,8 @@ async def add_material(message: Message):
                     "❌ *Incorrect Arguments*\n*Usage:*\n`/add_material <Course_ID>|<Type>`",
                 )
             course_id = int(args[0])
-            material_type = args[1].strip().lower()
-            file_id = message.document.file_id
-            file_name = message.document.file_name
+            material_type = args[1].strip().lower() 
+
             try:
                 await database.add_material(course_id, file_name, material_type, file_id)
                 await log_to_group(f"Added a new material with: course id={course_id}, file name={file_name}, material type={material_type}")
@@ -81,13 +83,21 @@ async def add_material(message: Message):
                 await log_to_group(f"Failed to add material: {e}")
                 return await bot.reply_to(message, "❌ Failed to add material.")
 
+        else:
+            await bot.reply_to(
+                message,
+                f"*Got it!*\n*File ID:*\n`{file_id}`",
+                parse_mode="Markdown"
+            )          
+            logger.info(f"Got file {file_name} with ID: {file_id}")
+            await log_to_group(f"Got file {file_name} with ID: {file_id}")
     else:
         await bot.reply_to(
             message,
             f"*لسه مضفتش ميزة أنك ترفع الماتريال بتاعتك للبوت 🙃*\n*لإعادة تحميل القائمة اضغط /start*."
         )
         
-        logger.info(f"User {message.from_user.id}({message.from_user.username}) tried sending a file with name={message.document.file_name}, ID={message.document.file_id}")
+        logger.info(f"User {message.from_user.id}({message.from_user.username}) tried sending a file with name={file_name}, ID={file_id}")
         await log_to_group(f"User {message.from_user.id}({message.from_user.username}) tried sending this file:")
         await bot.forward_message(
             LOGS_GROUP,

@@ -1,11 +1,11 @@
 import telebot
 import asyncio
 import logging
-from telebot.types import Message, ReplyKeyboardMarkup, KeyboardButton, LinkPreviewOptions
+from telebot.types import Message, ReplyKeyboardMarkup, KeyboardButton, LinkPreviewOptions, InputMediaVideo
 #=====
 import database
 from keyboards import primary
-from config import bot, COLLEGE_FILE_IDS
+from config import bot, COLLEGE_FILE_IDS, TUTORIAL_VIDEO
 from handlers.admin import *
 from handlers.start import *
 #=====================
@@ -28,7 +28,14 @@ telebot.logger.setLevel(logging.INFO)
 # Start Command
 @bot.message_handler(commands=['start'])
 async def start(message: Message):
-    intro_message = "*السلام عليكم* 👋\n\nفي البوت ده ان شاء الله هتلاقي ماتريال لكل مواد الكلية من أولى لرابعة 🌠\nلو في أي مشكلة حصلت معاك أو عندك ماتريال حابب تضيفها ياريت تتواصل معايا 🤝\n\n*نصيحة*: اقفل التنزيل التلقائي ف التليجرام عشان متنزلش كل الفايلات مرة واحدة على جهازك :)\n\n*اختار من القائمة* 🔥"
+    intro_message = (
+        "<b>السلام عليكم</b> 👋\n\n"
+        "في البوت ده إن شاء الله هتلاقي ماتريال لكل مواد الكلية من أولى لرابعة 🌠\n"
+        "لو في أي مشكلة حصلت معاك أو عندك ماتريال حابب تضيفها ياريت تتواصل معايا 🤝\n\n"
+        "<b>نصيحة:</b> اقفل التنزيل التلقائي في التيليجرام عشان متنزلش كل الفايلات مرة واحدة على جهازك 🫠\n\n"
+        "<b>اختر من القائمة</b> 🔥\n\n"
+        "<blockquote><b>ملحوظة:</b> لو فاتح من <b>تيليجرام ويب</b>، القائمة هتكون في الزرار اللي جنب زرار الريكورد.</blockquote>"
+    )
 
     if message.chat.type != "private":
         return await bot.send_message(
@@ -52,7 +59,7 @@ async def start(message: Message):
         message.chat.id,
         intro_message,
         reply_markup=markup,
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 #=====================
@@ -64,7 +71,7 @@ async def handle_keyboard(message: Message):
     if message.text == "📚 Materials":
         await bot.send_message(
             message.chat.id,
-            "اختار الفرقة",
+            "اختر الفرقة",
             reply_markup=primary.year_markup
         )
 
@@ -94,9 +101,9 @@ async def handle_keyboard(message: Message):
         )
 
     elif message.text == "فيديو توضيحي لاستخدام البوت 🎥":
-        await bot.reply_to(
-            message,
-            "لسه مفيش حاجه هنا\nلما يخلص البوت بقا 🗿"
+        await bot.send_video(
+            message.chat.id,
+            TUTORIAL_VIDEO
         )
 
     else:
