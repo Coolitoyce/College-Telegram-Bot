@@ -34,7 +34,7 @@ async def start(message: Message):
         "لو في أي مشكلة حصلت معاك أو عندك ماتريال حابب تضيفها ياريت تتواصل معايا 🤝\n\n"
         "<b>نصيحة:</b> اقفل التنزيل التلقائي في التيليجرام عشان متنزلش كل الفايلات مرة واحدة على جهازك 🫠\n\n"
         "<b>اختر من القائمة</b> 🔥\n\n"
-        "<blockquote><b>ملحوظة:</b> لو فاتح من <b>تيليجرام ويب</b>، القائمة هتكون في الزرار اللي جنب زرار الريكورد.</blockquote>"
+        "<blockquote><b>ملحوظة:</b> لو فاتح من <b>تيليجرام ويب</b>، القائمة هتكون في الزرار اللي جنب زرار الريكورد/الكاميرا.</blockquote>"
     )
 
     if message.chat.type != "private":
@@ -62,6 +62,9 @@ async def start(message: Message):
         parse_mode="HTML"
     )
 
+    logger.info(f"User {message.from_user.id}({message.from_user.username}) executed /start.")
+    await log_to_group(f"User {message.from_user.id}({message.from_user.username}) executed /start.")
+
 #=====================
 # Handle Regular Messages
 @bot.message_handler(func=lambda m: not m.text.startswith('/start'))
@@ -85,7 +88,7 @@ async def handle_keyboard(message: Message):
     elif message.text == "🤖 About":
         await bot.reply_to(
             message,
-            f"<b>Made with ♥️ by @coolitoyce</b>.\n<b>Using the <a href='https://github.com/eternnoir/pyTelegramBotAPI'>pyTelegramBotAPI</a> Python Library</b>.",
+            f"<b>Made with ♥️ by @coolitoyce</b>.\n<b>Using the <a href='https://github.com/eternnoir/pyTelegramBotAPI'>pyTelegramBotAPI</a> Python Library</b>.\n\n<b><blockquote><a href='https://github.com/Coolitoyce/College-Telegram-Bot'>View GitHub Repository</a></blockquote></b>",
             link_preview_options=LinkPreviewOptions(is_disabled=True),
             parse_mode="HTML"
         )

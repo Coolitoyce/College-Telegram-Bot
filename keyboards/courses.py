@@ -124,7 +124,7 @@ year1_sem2_markup.row(
 
 
 #===============
-# Year 1 Semester 1
+# Year 2 Semester 1
 year2_sem1_markup = InlineKeyboardMarkup()
 year2_sem1_markup.row(
     InlineKeyboardButton(

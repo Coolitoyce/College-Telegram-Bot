@@ -28,11 +28,7 @@ async def year_handler(call: CallbackQuery):
     
     year = int(call.data.split(":")[1])
     state = user_states.setdefault(call.from_user.id, UserState())
-    try:
-        state.year = year
-
-    except Exception as e:
-        logger.error(f"Failed to update user's year: {e}")
+    state.year = year
 
     years = ["المستوى الأول", "المستوى الثاني", "المستوى الثالث", "المستوى الرابع"]
     year_text = years[year-1]
@@ -63,35 +59,34 @@ async def semester_handler(call: CallbackQuery):
     
     semester = int(call.data.split(":")[1])
     state = user_states.setdefault(call.from_user.id, UserState())
-    try:
-        state.semester = semester
+    state.semester = semester
 
-    except Exception as e:
-        logger.error(f"Failed to update user's semester: {e}")
+    year = state.year
+    if year is None:
+        logger.error(f"Error: User {call.from_user.id}({call.from_user.username}) tried to access an old menu, year not set.")
+        return await bot.reply_to(
+            call.message,
+            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            parse_mode="Markdown"
+        )
 
-    try:
-        year = int(state.year)
-
-    except Exception as e:
-        logging.error(e)
-    
     if year == 1:
         if semester == 1:
             markup = courses.year1_sem1_markup
-            sem = "الأول"
+            semester_text = "الأول"
 
         elif semester == 2:
             markup = courses.year1_sem2_markup
-            sem = "الثاني"
+            semester_text = "الثاني"
      
     elif year == 2:
         if semester == 1:
             markup = courses.year2_sem1_markup
-            sem = "الأول"
+            semester_text = "الأول"
 
         elif semester == 2:
             markup = courses.year2_sem2_markup
-            sem = "الثاني"
+            semester_text = "الثاني"
 
     else:
         markup = primary.back_markup
@@ -104,7 +99,7 @@ async def semester_handler(call: CallbackQuery):
         )  
     
     await bot.edit_message_text(
-        f"لقد اخترت *الترم {sem}*\n---\nاختر المادة",
+        f"لقد اخترت *الترم {semester_text}*\n---\nاختر المادة",
         call.message.chat.id,
         call.message.message_id,
         reply_markup=markup,
@@ -140,7 +135,16 @@ async def course_handler(call: CallbackQuery):
     course_id = int(call.data.split(":")[1])
     state = user_states.setdefault(call.from_user.id, UserState())
     state.course_id = course_id
+
     semester = state.semester
+    if semester is None:
+        logger.error(f"Error: User {call.from_user.id}({call.from_user.username}) tried to access an old menu, semester not set.")
+        return await bot.reply_to(
+            call.message,
+            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            parse_mode="Markdown"
+        )
+
     course_name = await database.get_course_name(course_id)
 
     await bot.edit_message_text(
@@ -160,8 +164,16 @@ async def material_handler(call: CallbackQuery):
     
     material_type = (call.data.split(":")[1])
     state = user_states.setdefault(call.from_user.id, UserState())
+
     course_id = state.course_id
- 
+    if course_id is None:
+        logger.error(f"Error: User {call.from_user.id}({call.from_user.username}) tried to access an old menu, course id not set.")
+        return await bot.reply_to(
+            call.message,
+            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            parse_mode="Markdown"
+        )
+
     materials = await database.get_materials(course_id, material_type) # materials (id, course_id, title, type, file_id, uploaded_at)
     media_group = []
     for material in materials:
@@ -176,6 +188,7 @@ async def material_handler(call: CallbackQuery):
             reply_markup=materials_kb.back_markup(course_id),
             parse_mode="Markdown"
         )
+
     else:
         await bot.edit_message_text(
             "*تم إرسال الماتريال المطلوبة*\nللرجوع شوف الرسالة تحت الملفات ⬇️",
@@ -207,7 +220,15 @@ async def resource_handler(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
 
     state = user_states.setdefault(call.from_user.id, UserState)
+
     course_id = state.course_id
+    if course_id is None:
+        logger.error(f"Error: User {call.from_user.id}({call.from_user.username}) tried to access an old menu, course id not set.")
+        return await bot.reply_to(
+            call.message,
+            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            parse_mode="Markdown"
+        )
 
     resources = await database.get_resources(course_id) # resources (id, course_id, title, url, uploaded_at)
 
