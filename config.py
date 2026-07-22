@@ -1,14 +1,17 @@
 from dotenv import load_dotenv
 from os import getenv
 from telebot.async_telebot import AsyncTeleBot
+from telebot.types import Message
+import logging
+from dataclasses import dataclass
 
-# Load Environment eariables
 #===========
+# Load Environment eariables
 load_dotenv()
 
 BOT_TOKEN = getenv("BOT_TOKEN", "")
 ADMIN_ID = int(getenv("ADMIN_ID", ""))
-LOGS_GROUP = getenv("LOGS_GROUP_ID", "")
+ADMIN_GROUP = int(getenv("ADMIN_GROUP_ID", ""))
 TUTORIAL_VIDEO = getenv("TUTORIAL_VIDEO_ID", "")
 
 if not BOT_TOKEN:
@@ -21,5 +24,32 @@ COLLEGE_FILE_IDS = [ # فايلات اللائحة
     for x in getenv("COLLEGE_FILES", "").split(",")
     if x.strip()
 ]
+#===========
+# Logging
+logger = logging.getLogger("coolig_bot")
+
+async def log_to_group(msg: str):
+    """Sends a message to the logs group chat"""
+    try:
+        await bot.send_message(
+            ADMIN_GROUP,
+            text=msg
+        )
+    except Exception as e:
+        logger.error(f"Failed to log to group: {e}")
 
 #===========
+# State Management
+@dataclass
+class UserState:
+    year: int | None = None
+    semester: int | None = None
+    department: str | None = None
+    course_id: int | None = None
+    material: str | None = None
+    awaiting: str | None = None # for when the user is sending their own materials
+    pending_message: Message | None = None # the pending operation message
+    sent_files: int = 0 # number of files sent by the user in the current operation
+
+
+user_states: dict[int, UserState] = {}

@@ -1,20 +1,9 @@
-from config import bot, LOGS_GROUP, ADMIN_ID
-from telebot.types import Message
+from config import bot, log_to_group, ADMIN_ID, UserState, user_states
+from telebot.types import Message, CallbackQuery,InlineKeyboardMarkup, InlineKeyboardButton
 import logging
 import database
 #===========
 logger = logging.getLogger("coolig_bot")
-
-#===========
-async def log_to_group(msg: str):
-    """Sends a message to the logs group chat"""
-    try:
-        await bot.send_message(
-            LOGS_GROUP,
-            text=msg
-        )
-    except Exception as e:
-        logger.error(f"Failed to log to group: {e}")
 
 #===========
 def isadmin(id: int) -> bool:
@@ -24,13 +13,39 @@ def isadmin(id: int) -> bool:
     return False
 
 #===========
+# Command to list all admin commands and their correct usages
+@bot.message_handler(commands=['admin_help'])
+async def admin_help(message: Message):
+    """Sends a list of all admin commands and their correct usages"""
+    if isadmin(message.from_user.id):
+        help_text = (
+            "<b>Admin Commands:</b>\n\n"
+            "<blockquote>"
+            "<code>/add_material</code> - Enables the admin upload material state.\n"
+            "<code>/get_file (FileID)</code> - Sends a file from a given ID.\n"
+            "<code>/add_resource (CourseID)|(Title)|(URL)</code> - Adds a new resource to the database.\n"
+            "<code>/add_course (Course Name)|(Year)|(Semester)|(Department)</code> - Adds a new course to the database.\n"
+            "<code>/get_courses [Year] [Semester]</code> - Gets courses in the database.\n"
+            "<code>/get_materials [CourseID] [Type]</code> - Gets materials in the database.\n"
+            "<code>/get_resources [CourseID]</code> - Gets resources in the database.\n"
+            "<code>/id</code> - Gets the current chat ID."
+            "</blockquote>"
+        )
+        await bot.reply_to(
+            message,
+            help_text,
+            parse_mode="HTML"
+        )
+
+
+#===========
 @bot.message_handler(commands=['get_file'])
-async def add_material(message: Message):
+async def handle_admin_upload(message: Message):
     """Sends a file from a given ID"""
     if isadmin(message.from_user.id):
         args = message.text.split(maxsplit=1)
         if len(args) != 2:
-            return await bot.reply_to(message, "*Usage:*\n`/get_file <FILEID>`", parse_mode="Markdown")
+            return await bot.reply_to(message, "*Usage:*\n`/get_file <FileID>`", parse_mode="Markdown")
 
         file_id = args[1]
         try:
@@ -42,68 +57,93 @@ async def add_material(message: Message):
 
 
 #===========
-@bot.message_handler(content_types=['document', 'video', 'photo'])
-async def add_material(message: Message):
+# Handle admin upload of materials
+async def handle_admin_upload(message: Message):
     """Adds a new material to the database"""
     if message.content_type == "video":
         file_id = message.video.file_id
         file_name = message.video.file_name
     elif message.content_type == "photo":
-        file_id = message.photo.file_id
-        file_name = message.photo.file_name              
+        file_id = message.photo[-1].file_id
+        file_name = "Photo"           
     else:
         file_id = message.document.file_id
         file_name = message.document.file_name
 
-    if isadmin(message.from_user.id):
-        if message.caption is not None and message.caption.startswith('/add_material'):
-            args = message.caption.split(maxsplit=1) 
-            if len(args) != 2 or message.caption is None:
-                return await bot.reply_to(
-                    message,
-                    "*Usage:*\n`/add_material <Course_ID>|<Type>`",
-                    parse_mode="Markdown"
-                )
-            args = args[1].split(sep='|')
-            if len(args) != 2:
-                return await bot.reply_to(
-                    message,
-                    "❌ *Incorrect Arguments*\n*Usage:*\n`/add_material <Course_ID>|<Type>`",
-                )
-            course_id = int(args[0])
-            material_type = args[1].strip().lower() 
-
-            try:
-                await database.add_material(course_id, file_name, material_type, file_id)
-                await log_to_group(f"Added a new material with: course id={course_id}, file name={file_name}, material type={material_type}")
-                await bot.reply_to(message, "Got it! Material added successfully.")
-
-            except Exception as e:
-                logger.error(f"Failed to add material: {e}")
-                await log_to_group(f"Failed to add material: {e}")
-                return await bot.reply_to(message, "❌ Failed to add material.")
-
-        else:
-            await bot.reply_to(
+    if message.caption is not None:
+        args = message.caption.strip().split(sep='|')
+        if len(args) != 2:
+            return await bot.reply_to(
                 message,
-                f"*Got it!*\n*File ID:*\n`{file_id}`",
+                "❌ *Incorrect Arguments*\n*Usage:*\n`<CourseID>|<Type>`",
                 parse_mode="Markdown"
-            )          
-            logger.info(f"Got file {file_name} with ID: {file_id}")
-            await log_to_group(f"Got file {file_name} with ID: {file_id}")
+            )
+        course_id = int(args[0])
+        material_type = args[1].lower() 
+
+        try:
+            await database.add_material(course_id, file_name, material_type, file_id)
+            await log_to_group(f"Added a new material with: course id={course_id}, file name={file_name}, material type={material_type}")
+            await bot.reply_to(message, "Got it! ✅\nMaterial added successfully.")
+
+        except Exception as e:
+            logger.error(f"Failed to add material: {e}")
+            await log_to_group(f"Failed to add material: {e}")
+            return await bot.reply_to(message, "❌ Failed to add material.")
+
     else:
+        return await bot.reply_to(
+            message,
+            "❌ *Missing Caption*\n*Usage:*\n`<CourseID>|<Type>`",
+            parse_mode="Markdown"
+        )
+
+
+#===========
+@bot.message_handler(commands=['add_material'])
+async def enable_admin_upload(message: Message):
+    """Enables the admin upload material state"""
+    state = user_states.setdefault(message.from_user.id, UserState())
+    if isadmin(message.from_user.id):
+        state.awaiting = "admin_upload"
+
+        markup = InlineKeyboardMarkup()
+        markup.row(
+            InlineKeyboardButton(
+                "End ❌",
+                callback_data="end_admin_upload",
+                style="primary"
+            )
+        )
+
         await bot.reply_to(
             message,
-            f"*لسه مضفتش ميزة أنك ترفع الماتريال بتاعتك للبوت 🙃*\n*لإعادة تحميل القائمة اضغط /start*."
+            "*Admin Upload Material State Enabled*\n\nNow you can send a file with the caption `<CourseID>|<Type>` to add a new material to the database.",
+            reply_markup=markup,
+            parse_mode="Markdown"
         )
-        
-        logger.info(f"User {message.from_user.id}({message.from_user.username}) tried sending a file with name={file_name}, ID={file_id}")
-        await log_to_group(f"User {message.from_user.id}({message.from_user.username}) tried sending this file:")
-        await bot.forward_message(
-            LOGS_GROUP,
-            message.chat.id,
-            message.id
+        logger.info(f"User {message.from_user.id}({message.from_user.username}) enabled admin upload state.")
+        await log_to_group(f"User {message.from_user.id}({message.from_user.username}) enabled admin upload state.")
+
+
+#===========
+# Handle end admin upload material state
+@bot.callback_query_handler(func=lambda c: c.data == "end_admin_upload")
+async def end_admin_upload(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+    state = user_states.setdefault(call.from_user.id, UserState())
+
+    if isadmin(call.from_user.id):
+        state.awaiting = None
+        await bot.edit_message_text(
+            "*Admin Upload Material State Disabled* ❌",
+            call.message.chat.id,
+            call.message.id,
+            parse_mode="Markdown"
         )
+        logger.info(f"User {call.from_user.id}({call.from_user.username}) disabled admin upload state.")
+        await log_to_group(f"User {call.from_user.id}({call.from_user.username}) disabled admin upload state.")
+
 
 #===========
 @bot.message_handler(commands=['add_resource'])
@@ -114,14 +154,14 @@ async def add_resource(message: Message):
         if len(args) != 2:
             return await bot.reply_to(
                 message,
-                "*Usage:*\n`/add_resource <Course_ID>|<Title>|<URL>`",
+                "*Usage:*\n`/add_resource <CourseID>|<Title>|<URL>`",
                 parse_mode="Markdown"
             )
         args = args[1].split(sep='|')
         if len(args) != 3:
             return await bot.reply_to(
                 message,
-                "❌ *Incorrect Arguments*\n*Usage:*\n`/add_resource <Course_ID>|<Title>|<URL>`",
+                "❌ *Incorrect Arguments*\n*Usage:*\n`/add_resource <CourseID>|<Title>|<URL>`",
             )
         course_id = int(args[0])
         title = args[1].strip()
@@ -200,7 +240,7 @@ async def get_courses(message: Message):
 
         elif year:
             courses = await database.get_courses(year=year)
-            reply_msg += f"\n<b>Year {year} Courses</b>\n<blockquote>"
+            reply_msg += f"\n<b>Year {year} Courses</b>\n<blockquote expandable>"
             for course in courses: 
                 reply_msg += f"<b>{course[1]}</b>\nID: {course[0]}\nSemester: {course[3]}\nDepartment: {course[4]}\n\n"
 
@@ -209,7 +249,7 @@ async def get_courses(message: Message):
         else:
             courses = await database.get_courses() 
             for i in range(1, 5):
-                reply_msg += f"=====\n<b>Year {i} Courses</b>\n<blockquote>"
+                reply_msg += f"=====\n<b>Year {i} Courses</b>\n<blockquote expandable>"
                 found_course = False
                 for course in courses: 
                     if course[2] == i:
@@ -241,7 +281,7 @@ async def get_materials(message: Message):
         reply_msg = ""
         if material_type:
             materials = await database.get_materials(course_id, material_type) # materials = (id, course_id, title, type, telegram_file_id, uploaded_at)
-            reply_msg += f"\n<b>Course {course_id} Materials of Type {material_type}</b>\n<blockquote>"
+            reply_msg += f"\n<b>Course {course_id} Materials of Type {material_type}</b>\n<blockquote expandable>"
             for material in materials: 
                 reply_msg += f"<b>{material[2]}</b>\nID: {material[0]}\nTelegram File ID: {material[4]}\nUploaded at: {material[5]}\n\n"
 
@@ -249,7 +289,7 @@ async def get_materials(message: Message):
 
         elif course_id:
             materials = await database.get_materials(course_id) 
-            reply_msg += f"\n<b>Course {course_id} Materials</b>\n<blockquote>"
+            reply_msg += f"\n<b>Course {course_id} Materials</b>\n<blockquote expandable>"
             for material in materials: 
                 reply_msg += f"<b>{material[2]}</b>\nID: {material[0]}\nType: {material[3]}\nTelegram File ID: {material[4]}\nUploaded at: {material[5]}\n\n"
 
@@ -262,7 +302,7 @@ async def get_materials(message: Message):
                     max_course_id = x[1]
 
             for i in range(1, max_course_id + 1):
-                reply_msg += f"=====\n<b>Course {i} Materials</b>\n<blockquote>"
+                reply_msg += f"=====\n<b>Course {i} Materials</b>\n<blockquote expandable>"
                 found_material = False
                 for material in materials: 
                     if material[1] == i:
@@ -290,7 +330,7 @@ async def get_resources(message: Message):
         reply_msg = ""
         if course_id:
             resources = await database.get_resources(course_id) # resources = (id, course_id, title, url, uploaded_at)
-            reply_msg += f"\n<b>Course {course_id} Resources</b>\n<blockquote>"
+            reply_msg += f"\n<b>Course {course_id} Resources</b>\n<blockquote expandable>"
             for resource in resources: 
                 reply_msg += f"<b>{resource[2]}</b>\nID: {resource[0]}\nURL: {resource[3]}\nUploaded at: {resource[4]}\n\n"
 
@@ -303,7 +343,7 @@ async def get_resources(message: Message):
                     max_course_id = x[1]
 
             for i in range(1, max_course_id + 1):
-                reply_msg += f"=====\n<b>Course {i} Resources</b>\n<blockquote>"
+                reply_msg += f"=====\n<b>Course {i} Resources</b>\n<blockquote expandable>"
                 found_resource = False
                 for resource in resources: 
                     if resource[1] == i:

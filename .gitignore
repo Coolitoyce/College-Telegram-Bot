@@ -3,6 +3,7 @@
 *.log
 database.db
 stuff.txt
+test.py
 
 # Folders
 __pycache__/

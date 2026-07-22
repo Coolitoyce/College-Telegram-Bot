@@ -97,4 +97,49 @@ back_markup.row(
         style="primary"
     )
 )
+
 #===========
+# Contribute Keyboard
+contribute_markup = InlineKeyboardMarkup()
+contribute_markup.row(
+    InlineKeyboardButton(
+        "📄 Files",
+        callback_data="send:doc"
+    ),
+    InlineKeyboardButton(
+        "▶️ Video links",
+        callback_data="send:link"
+    )
+)
+
+#===========
+# End Contribute Keyboard
+end_contribute_markup = InlineKeyboardMarkup()
+end_contribute_markup.row(
+    InlineKeyboardButton(
+        "انهاء ✅",
+        style="primary",
+        callback_data="finish_send"
+    ),
+)
+#===========
+# Cancel Contribute Keyboard (For links )
+cancel_markup = InlineKeyboardMarkup()
+cancel_markup.row(
+    InlineKeyboardButton(
+        "الغاء ❌",
+        style="primary",
+        callback_data="cancel_send"
+    ),
+)
+
+#===========
+# #Inline Contribute Keyboard
+# single_contribute_markup = InlineKeyboardMarkup()
+# single_contribute_markup.row(
+#     InlineKeyboardButton(
+#         "Contribute 🤝",
+#         callback_data="contribute",
+#         style="success" 
+#     )
+# )

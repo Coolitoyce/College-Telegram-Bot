@@ -1,24 +1,11 @@
-from config import bot
+from config import bot, UserState, user_states 
 from telebot.types import CallbackQuery, InputMediaDocument
-from dataclasses import dataclass
 from keyboards import courses, materials as materials_kb, primary
 import logging
 import database
 from asyncio import sleep
 #=====================
 logger = logging.getLogger("coolig_bot")
-
-#=====================
-# State Management
-@dataclass
-class UserState:
-    year: int | None = None
-    semester: int | None = None
-    department: str | None = None
-    course_id: int | None = None
-    material: str | None = None
-
-user_states: dict[int, UserState] = {}
 
 #=====================
 # Year Handler
@@ -205,6 +192,7 @@ async def material_handler(call: CallbackQuery):
         await sleep(0.2)
 
     logger.info(f"Sent materials of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({call.from_user.username})")
+        
     await bot.send_message(
         call.message.chat.id,
         "*What next?*",
@@ -258,15 +246,14 @@ async def resource_handler(call: CallbackQuery):
 
 
 #=====================
-# General Handler
-@bot.callback_query_handler(func=lambda c: True)
+# Home Callback Handler
+@bot.callback_query_handler(func=lambda c: c.data.startswith("home"))
 async def callback(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
 
-    if call.data.startswith("home"):
-        await bot.edit_message_text(
-            "اختر الفرقة",
-            call.message.chat.id,
-            call.message.message_id,
-            reply_markup=primary.year_markup
-        )
+    await bot.edit_message_text(
+        "اختر الفرقة",
+        call.message.chat.id,
+        call.message.message_id,
+        reply_markup=primary.year_markup
+    )
