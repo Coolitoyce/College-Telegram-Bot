@@ -47,9 +47,10 @@ class UserState:
     department: str | None = None
     course_id: int | None = None
     material: str | None = None
-    awaiting: str | None = None # for when the user is sending their own materials
+    awaiting: str | None = None # for awaiting user action
+    # available states: ("doc", "link", "desc", "admin_upload")
     pending_message: Message | None = None # the pending operation message
-    sent_files: int = 0 # number of files sent by the user in the current operation
+    sent_files: int = 0 # number of files sent by the user when contributing
 
 
 user_states: dict[int, UserState] = {}

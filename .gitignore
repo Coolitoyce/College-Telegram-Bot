@@ -8,3 +8,4 @@ test.py
 # Folders
 __pycache__/
 .vscode/
+.venv/

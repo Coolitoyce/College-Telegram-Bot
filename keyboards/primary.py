@@ -123,9 +123,9 @@ end_contribute_markup.row(
     ),
 )
 #===========
-# Cancel Contribute Keyboard (For links )
-cancel_markup = InlineKeyboardMarkup()
-cancel_markup.row(
+# Cancel Contribute Keyboard (For links)
+cancel_contribute_markup = InlineKeyboardMarkup()
+cancel_contribute_markup.row(
     InlineKeyboardButton(
         "الغاء ❌",
         style="primary",
@@ -134,12 +134,23 @@ cancel_markup.row(
 )
 
 #===========
-# #Inline Contribute Keyboard
-# single_contribute_markup = InlineKeyboardMarkup()
-# single_contribute_markup.row(
-#     InlineKeyboardButton(
-#         "Contribute 🤝",
-#         callback_data="contribute",
-#         style="success" 
-#     )
-# )
+# Contribute Description Keyboard
+description_markup = InlineKeyboardMarkup()
+description_markup.row(
+    InlineKeyboardButton(
+        "📝 Description",
+        style="primary",
+        callback_data="description"
+    )
+)
+
+#===========
+# Cancel Description Keyboard
+cancel_desc_markup = InlineKeyboardMarkup()
+cancel_desc_markup.row(
+    InlineKeyboardButton(
+        "الغاء ❌",
+        style="primary",
+        callback_data="cancel_description"
+    )
+)

@@ -1,4 +1,4 @@
-from config import bot, UserState, user_states 
+from config import bot, UserState, user_states, log_to_group 
 from telebot.types import CallbackQuery, InputMediaDocument
 from keyboards import courses, materials as materials_kb, primary
 import logging
@@ -49,8 +49,9 @@ async def semester_handler(call: CallbackQuery):
     state.semester = semester
 
     year = state.year
+    username = call.from_user.username if call.from_user.username else call.from_user.full_name
     if year is None:
-        logger.error(f"Error: User {call.from_user.id}({call.from_user.username}) tried to access an old menu, year not set.")
+        logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, year not set.")
         return await bot.reply_to(
             call.message,
             f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
@@ -124,8 +125,9 @@ async def course_handler(call: CallbackQuery):
     state.course_id = course_id
 
     semester = state.semester
+    username = call.from_user.username if call.from_user.username else call.from_user.full_name
     if semester is None:
-        logger.error(f"Error: User {call.from_user.id}({call.from_user.username}) tried to access an old menu, semester not set.")
+        logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, semester not set.")
         return await bot.reply_to(
             call.message,
             f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
@@ -153,8 +155,9 @@ async def material_handler(call: CallbackQuery):
     state = user_states.setdefault(call.from_user.id, UserState())
 
     course_id = state.course_id
+    username = call.from_user.username if call.from_user.username else call.from_user.full_name
     if course_id is None:
-        logger.error(f"Error: User {call.from_user.id}({call.from_user.username}) tried to access an old menu, course id not set.")
+        logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, course id not set.")
         return await bot.reply_to(
             call.message,
             f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
@@ -166,8 +169,9 @@ async def material_handler(call: CallbackQuery):
     for material in materials:
         media_group.append(InputMediaDocument(material[4]))
 
+    username = call.from_user.username if call.from_user.username else call.from_user.full_name
     if len(media_group) == 0:
-        logger.info(f"Tried sending material of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({call.from_user.username}) but couldn't find any.")
+        logger.info(f"Tried sending material of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({username}) but couldn't find any.")
         return await bot.edit_message_text(
             "*مفيش ماتريال من النوع ده للمادة دي.* ❌",
             call.message.chat.id,
@@ -191,8 +195,8 @@ async def material_handler(call: CallbackQuery):
         )
         await sleep(0.2)
 
-    logger.info(f"Sent materials of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({call.from_user.username})")
-        
+    username = call.from_user.username if call.from_user.username else call.from_user.full_name
+    logger.info(f"Sent materials of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({username})")
     await bot.send_message(
         call.message.chat.id,
         "*What next?*",
@@ -210,8 +214,9 @@ async def resource_handler(call: CallbackQuery):
     state = user_states.setdefault(call.from_user.id, UserState)
 
     course_id = state.course_id
+    username = call.from_user.username if call.from_user.username else call.from_user.full_name
     if course_id is None:
-        logger.error(f"Error: User {call.from_user.id}({call.from_user.username}) tried to access an old menu, course id not set.")
+        logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, course id not set.")
         return await bot.reply_to(
             call.message,
             f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",

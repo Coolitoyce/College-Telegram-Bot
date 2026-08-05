@@ -1,14 +1,14 @@
 from config import bot, log_to_group, ADMIN_GROUP, UserState, user_states
 from telebot.types import Message, CallbackQuery, ReactionTypeEmoji
 import logging
-from keyboards.primary import contribute_markup, cancel_markup, end_contribute_markup
+from keyboards.primary import contribute_markup, cancel_contribute_markup, end_contribute_markup, description_markup, cancel_desc_markup
 from urllib.parse import urlparse
 #===========
 logger = logging.getLogger("coolig_bot")
 
 #===========
 # Handle contribute
-@bot.message_handler(func=lambda m: m.text == "Contribute 🤝")
+@bot.message_handler(func=lambda m: m.text == "🤝 Contribute", chat_types=["private"])
 async def hande_contribute(message: Message):
     reply_msg = (
         "*عندك ماتريال حابب تضيفها للبوت؟*\n"
@@ -49,7 +49,7 @@ async def handle_contribute_call(call: CallbackQuery):
             "*في انتظارك حتى ترسل اللينك...* ⌚",
             call.message.chat.id,
             call.message.id,
-            reply_markup=cancel_markup,
+            reply_markup=cancel_contribute_markup,
             parse_mode="Markdown"
         )
 #===========
@@ -70,14 +70,19 @@ async def handle_end_contribute(call: CallbackQuery):
 
         if state.sent_files > 0:
             reply_msg = (
-                "*تم استلام الفايلات بنجاح!* ✅\n\n"
+                "<b>تم استلام الفايلات بنجاح!</b> ✅\n\n"
                 "هيتم مراجعة الفايلات وفي حالة التأكد هتتضاف للبوت.\n"
-                "*شكرا على مساهمتك* 🫡"
+                "<b>شكرا على مساهمتك</b> 🫡\n\n"
+                "<blockquote><b>(اختياري: )</b>\n"
+                "<b>لو حابب تضيف وصف للماتريال اللي بعتها، مثلا تبع مادة ايه والفايلات دي محاضرات، أو ملخصات، الخ... </b>"
+                "<b>اضغط على Description 📝</b></blockquote>"
             )
+
             await bot.reply_to(
                 call.message,
                 reply_msg,
-                parse_mode="Markdown"
+                reply_markup=description_markup,
+                parse_mode="HTML"
             )
         
     elif call.data == "cancel_send":
@@ -116,11 +121,9 @@ async def handle_file_contribute(message: Message):
         file_name = message.video.file_name
         file_id = message.video.file_id
 
+    username = message.from_user.username if message.from_user.username else message.from_user.full_name
     logger.info(
-        f"User {message.from_user.id}({message.from_user.username}) sent {message.content_type} with name={file_name}, ID={file_id}"
-    )
-    await log_to_group(
-        f"User {message.from_user.id}({message.from_user.username}) sent {message.content_type} with name={file_name}"
+        f"User {message.from_user.id}({username}) sent {message.content_type} with name={file_name}, ID={file_id}"
     )
 
 #===========
@@ -134,8 +137,10 @@ def is_valid_url(url: str) -> bool:
 async def handle_link_contribute(message: Message):
     state = user_states.setdefault(message.from_user.id, UserState())
     if state.awaiting == "link":
-        if is_valid_url(message.text.strip()):
-            state.awaiting = None
+        state.awaiting = None
+        args = message.text.split()
+        
+        if any(is_valid_url(x) for x in args):
             await bot.edit_message_text(
                 "*تم انهاء العملية.* ✅",
                 message.chat.id,
@@ -149,12 +154,23 @@ async def handle_link_contribute(message: Message):
                 message.id
             )
 
-            logger.info(f"User {message.from_user.id}({message.from_user.username}) sent a link: {message.text}")
-            reply_msg = (
-                "*تم استلام اللينك!* ✅\n\n"
-                "هيتم مراجعة اللينك وفي حالة التأكد هيتضاف للبوت.\n"
-                "*شكرا على مساهمتك* 🫡"
-            )
+            username = message.from_user.username if message.from_user.username else message.from_user.full_name
+            
+            valid_links = [arg for arg in args if is_valid_url(arg)]
+            if len(valid_links) > 1:
+                logger.info(f"User {message.from_user.id}({username}) sent multiple links: {valid_links}")
+                reply_msg = (
+                    "*تم استلام اللينكات!* ✅\n\n"
+                    "هيتم مراجعة اللينكات وفي حالة التأكد هتتضاف للبوت.\n"
+                    "*شكرا على مساهمتك* 🫡"
+                )
+            else:
+                logger.info(f"User {message.from_user.id}({username}) sent a link: {valid_links[0]}")
+                reply_msg = (
+                    "*تم استلام اللينك!* ✅\n\n"
+                    "هيتم مراجعة اللينك وفي حالة التأكد هيتضاف للبوت.\n"
+                    "*شكرا على مساهمتك* 🫡"
+                )                
             await bot.reply_to(
                 message,
                 reply_msg,
@@ -162,7 +178,6 @@ async def handle_link_contribute(message: Message):
             )
 
         else:
-            state.awaiting = None
             await bot.edit_message_text(
                 "*تم انهاء العملية.* ❌",
                 message.chat.id,
@@ -171,7 +186,7 @@ async def handle_link_contribute(message: Message):
             )
             reply_msg = (
                 "*اللينك ده غير صحيح* ❌\n\n"
-                "*لازم اللينك يبدأ بـ* `http` *أو* `https` *ويكون لينك كامل، ومتبعتش أكتر من لينك.*\n"
+                "*لازم اللينك يبدأ بـ* `http` *أو* `https` *ويكون لينك كامل.*\n"
                 "*ارجع الى قائمة Contribute 🤝 للمحاولة من جديد.*"
             )
 
@@ -180,3 +195,69 @@ async def handle_link_contribute(message: Message):
                 reply_msg,
                 parse_mode="Markdown"
             )
+
+#===========
+# Handle sending description
+async def handle_description_contribute(message: Message):
+    state = user_states.setdefault(message.from_user.id, UserState())
+    if state.awaiting == "desc":
+        state.awaiting = None
+        await bot.edit_message_text(
+            "*تم انهاء العملية.* ✅",
+            message.chat.id,
+            state.pending_message.id,
+            parse_mode="Markdown"
+        )
+
+        await bot.forward_message(
+            ADMIN_GROUP,
+            message.chat.id,
+            message.id
+        )
+
+        username = message.from_user.username if message.from_user.username else message.from_user.full_name
+        logger.info(f"User {message.from_user.id}({username}) sent a description for the contribution: {message.text}")
+
+        reply_msg = (
+            "<b>تم استلام الفايلات مع الوصف بنجاح!</b> ✅\n\n"
+            "هيتم مراجعة الفايلات وفي حالة التأكد هتتضاف للبوت.\n"
+            "<b>شكرا على مساهمتك</b> 🫡\n\n"
+        )
+
+        await bot.reply_to(
+            message,
+            reply_msg,
+            parse_mode="HTML"
+        )
+
+#===========
+# Handle description callback
+@bot.callback_query_handler(func=lambda c: c.data == "description")
+async def handle_description_call(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+
+    state = user_states.setdefault(call.from_user.id, UserState())
+    state.awaiting = "desc"
+    state.pending_message = call.message
+    await bot.edit_message_text(
+        "*في انتظارك حتى ترسل الوصف...* ⌚",
+        call.message.chat.id,
+        call.message.id,
+        reply_markup=cancel_desc_markup,
+        parse_mode="Markdown"
+    )
+
+#===========
+# Handle cancel description callback
+@bot.callback_query_handler(func=lambda c: c.data == "cancel_description")
+async def handle_cancel_description(call: CallbackQuery):
+    await bot.answer_callback_query(call.id)
+
+    state = user_states.setdefault(call.from_user.id, UserState())
+    state.awaiting = None
+    await bot.edit_message_text(
+        "*تم الغاء الوصف.* ❌",
+        call.message.chat.id,
+        call.message.id,
+        parse_mode="Markdown"
+    )

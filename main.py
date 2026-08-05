@@ -36,12 +36,20 @@ async def start(message: Message):
             "*البوت في انتظارك حتى تنهي عملية إرسال الفايلات.* ❌",
             parse_mode="Markdown"
         )
+
     elif state.awaiting == "link":
         return await bot.reply_to(
             state.pending_message,
             "*البوت في انتظارك حتى تنهي عملية إرسال اللينك.* ❌",
             parse_mode="Markdown"
-        )    
+        )  
+
+    elif state.awaiting == "desc":
+        return await bot.reply_to(
+            state.pending_message,
+            "*البوت في انتظارك حتى تنهي عملية إرسال الوصف.* ❌",
+            parse_mode="Markdown"
+        )  
     
     intro_message = (
         "<b>السلام عليكم</b> 👋\n\n"
@@ -72,7 +80,7 @@ async def start(message: Message):
     markup.row(
         "فيديو توضيحي 🎥",
         KeyboardButton(
-            "Contribute 🤝",
+            "🤝 Contribute",
             style="success"            
         )
     )
@@ -84,18 +92,19 @@ async def start(message: Message):
         parse_mode="HTML"
     )
 
-    logger.info(f"User {message.from_user.id}({message.from_user.username}) executed /start.")
-    await log_to_group(f"User {message.from_user.id}({message.from_user.username}) executed /start.")
 
 #=====================
 # Handle Regular Messages
-@bot.message_handler(func=lambda m: not m.text.startswith('/start'))
+@bot.message_handler(func=lambda m: not m.text.startswith('/start'), chat_types=["private"]) #and m.chat.type == "private"
 async def handle_keyboard(message: Message):
     message.text = message.text.strip()
     state = user_states.setdefault(message.from_user.id, UserState())
 
     if state.awaiting == "link":
         return await handle_link_contribute(message)
+
+    elif state.awaiting == "desc":
+        return await handle_description_contribute(message)
 
     elif state.awaiting == "doc":
         return await bot.reply_to(
@@ -152,7 +161,7 @@ async def handle_keyboard(message: Message):
 
 #=====================
 # Basic check for Unknown commands from non admin users
-@bot.message_handler(func=lambda m: m.text.startswith('/'))
+@bot.message_handler(func=lambda m: m.text.startswith('/'), chat_types=["private"])
 async def handle_messages(message: Message):
     state = user_states.setdefault(message.from_user.id, UserState())
     if state.awaiting == "doc":
@@ -161,12 +170,20 @@ async def handle_messages(message: Message):
             "*البوت في انتظارك حتى تنهي عملية إرسال الفايلات.* ❌",
             parse_mode="Markdown"
         )
+
     elif state.awaiting == "link":
         return await bot.reply_to(
             state.pending_message,
             "*البوت في انتظارك حتى تنهي عملية إرسال اللينك.* ❌",
             parse_mode="Markdown"
         )   
+    
+    elif state.awaiting == "desc":
+        return await bot.reply_to(
+            state.pending_message,
+            "*البوت في انتظارك حتى تنهي عملية إرسال الوصف.* ❌",
+            parse_mode="Markdown"
+        )
 
     if not isadmin(message.from_user.id):
         error_msg = "*أمر غير معرف!* ❌\nلا ترسل رسائل مباشرة في شات البوت\nلإعادة تحميل القائمة اضغط */start*"
@@ -178,7 +195,7 @@ async def handle_messages(message: Message):
 
 #=====================
 # Handle receiving files
-@bot.message_handler(content_types=["document", "photo", "video"])
+@bot.message_handler(content_types=["document", "photo", "video"], chat_types=["private"])
 async def handle_files(message: Message):
     state = user_states.setdefault(message.from_user.id, UserState())
     if state.awaiting == "doc":
