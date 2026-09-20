@@ -59,6 +59,21 @@ async def add_course(name: str, year: int, sem: int, dept: str = None):
 
 
 #=====================
+async def remove_course(course_id: int):
+    """Removes a course from the database"""
+    async with aiosqlite.connect("database.db") as db:
+        cursor = await db.execute(
+            "DELETE FROM courses WHERE id = ?", (course_id,)
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            logger.warning(f"Attempted to remove course with ID: {course_id}, but it does not exist.")
+            return False
+
+        logger.info(f"Removed course with ID: {course_id}")
+        return True
+
+#=====================
 async def get_course_name(course_id: int):
     """Gets a course name from its ID"""
     async with aiosqlite.connect("database.db") as db:
@@ -69,12 +84,16 @@ async def get_course_name(course_id: int):
 
 
 #=====================
-async def get_courses(year: int = None, semester: int = None):
+async def get_courses(year: int = None, semester: int = None, dept: str = None):
     """Get all courses in the database"""
     async with aiosqlite.connect("database.db") as db:
         db.row_factory = aiosqlite.Row
         courses = []
-        if semester:
+        if dept:
+            async with db.execute("SELECT * FROM courses WHERE year = ? AND semester = ? AND department = ? ORDER BY year, semester", (year, semester, dept)) as cursor:
+                async for row in cursor:
+                    courses.append((row['id'], row['name'], row['year'], row['semester'], row['department']))
+        elif semester:
             async with db.execute("SELECT * FROM courses WHERE year = ? AND semester = ? ORDER BY year, semester", (year, semester)) as cursor:
                 async for row in cursor:
                     courses.append((row['id'], row['name'], row['year'], row['semester'], row['department']))            

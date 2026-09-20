@@ -92,6 +92,9 @@ async def start(message: Message):
         parse_mode="HTML"
     )
 
+    username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
+    logger.info(f"User {message.from_user.id}({username}) executed /start.")
+    await log_to_group(f"User {message.from_user.id}({username}) executed /start.")
 
 #=====================
 # Handle Regular Messages

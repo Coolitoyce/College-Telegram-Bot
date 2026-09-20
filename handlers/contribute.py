@@ -121,7 +121,7 @@ async def handle_file_contribute(message: Message):
         file_name = message.video.file_name
         file_id = message.video.file_id
 
-    username = message.from_user.username if message.from_user.username else message.from_user.full_name
+    username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
     logger.info(
         f"User {message.from_user.id}({username}) sent {message.content_type} with name={file_name}, ID={file_id}"
     )
@@ -154,7 +154,7 @@ async def handle_link_contribute(message: Message):
                 message.id
             )
 
-            username = message.from_user.username if message.from_user.username else message.from_user.full_name
+            username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
             
             valid_links = [arg for arg in args if is_valid_url(arg)]
             if len(valid_links) > 1:
@@ -215,7 +215,7 @@ async def handle_description_contribute(message: Message):
             message.id
         )
 
-        username = message.from_user.username if message.from_user.username else message.from_user.full_name
+        username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
         logger.info(f"User {message.from_user.id}({username}) sent a description for the contribution: {message.text}")
 
         reply_msg = (

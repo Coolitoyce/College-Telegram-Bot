@@ -52,6 +52,35 @@ semester_markup.row(
 )
 
 #===========
+# Departments Semesters Keyboard
+def dept_semester_markup(year: int):
+    markup = InlineKeyboardMarkup()
+    markup.row(
+        InlineKeyboardButton(
+            "الترم الثاني",
+            callback_data="sem:2"
+        ),
+        InlineKeyboardButton(
+            "الترم الأول",
+            callback_data="sem:1"
+        )
+    )
+    markup.row(
+        InlineKeyboardButton(
+            "القائمة الرئيسية 🔝",
+            callback_data="home",
+            style="primary"
+        ),
+        InlineKeyboardButton(
+            "رجوع 🔙",
+            callback_data=f"year:{year}",
+            style="primary"
+        )
+    )
+
+    return markup
+
+#===========
 # Departments Keyboard
 dept_markup = InlineKeyboardMarkup()
 dept_markup.row(
@@ -80,7 +109,6 @@ dept_markup.row(
         style="primary"
     )
 )
-
 
 #===========
 # Back Keyboard

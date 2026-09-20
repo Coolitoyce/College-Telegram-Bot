@@ -235,3 +235,281 @@ year2_sem2_markup.row(
 )
 
 #===============
+# Year 3 Semester 1 CS Department
+year3_sem1_cs_markup = InlineKeyboardMarkup()
+year3_sem1_cs_markup.row(
+    InlineKeyboardButton(
+        "🧮 Algorithms Design and Analysis",
+        callback_data="course:30"
+    )
+)
+year3_sem1_cs_markup.row(
+    InlineKeyboardButton(
+        "💾 Microprocessors",
+        callback_data="course:29"
+    )
+)
+year3_sem1_cs_markup.row(
+    InlineKeyboardButton(
+        "🤖 Machine Learning",
+        callback_data="course:31"
+    )
+)
+year3_sem1_cs_markup.row(
+    InlineKeyboardButton(
+        "🔍 Software Testing",
+        callback_data="course:32"
+    )
+)
+year3_sem1_cs_markup.row(
+    InlineKeyboardButton(
+        "🧠 Soft Computing",
+        callback_data="course:33"
+    )
+)
+year3_sem1_cs_markup.row(
+    InlineKeyboardButton(
+        "🌐 Distributed Systems",
+        callback_data="course:34"
+    )
+)
+
+year3_sem1_cs_markup.row(
+    InlineKeyboardButton(
+        "القائمة الرئيسية 🔝",
+        callback_data="home",
+        style="primary"
+    ),
+    InlineKeyboardButton(
+        "رجوع 🔙",
+        callback_data="dept:cs",
+        style="primary"
+    )
+)
+
+#===============
+# Year 3 Semester 1 IT Department
+year3_sem1_it_markup = InlineKeyboardMarkup()
+year3_sem1_it_markup.row(
+    InlineKeyboardButton(
+        "🧮 Algorithms Design and Analysis",
+        callback_data="course:30"
+    )
+)
+year3_sem1_it_markup.row(
+    InlineKeyboardButton(
+        "💾 Microprocessors",
+        callback_data="course:29"
+    )
+)
+year3_sem1_it_markup.row(
+    InlineKeyboardButton(
+        "📡 Digital Signal Processing",
+        callback_data="course:35"
+    )
+)
+year3_sem1_it_markup.row(
+    InlineKeyboardButton(
+        "🔍 Pattern Recognition",
+        callback_data="course:36"
+    )
+)
+year3_sem1_it_markup.row(
+    InlineKeyboardButton(
+        "🎨 Computer Graphics",
+        callback_data="course:37"
+    )
+)
+year3_sem1_it_markup.row(
+    InlineKeyboardButton(
+        "📶 Wireless and Sensor Networks",
+        callback_data="course:38"
+    )
+)
+
+year3_sem1_it_markup.row(
+    InlineKeyboardButton(
+        "القائمة الرئيسية 🔝",
+        callback_data="home",
+        style="primary"
+    ),
+    InlineKeyboardButton(
+        "رجوع 🔙",
+        callback_data="dept:it",
+        style="primary"
+    )
+)
+
+#===============
+# Year 3 Semester 1 IS Department
+year3_sem1_is_markup = InlineKeyboardMarkup()
+year3_sem1_is_markup.row(
+    InlineKeyboardButton(
+        "🧮 Algorithms Design and Analysis",
+        callback_data="course:30"
+    )
+)
+year3_sem1_is_markup.row(
+    InlineKeyboardButton(
+        "📋 Project Management",
+        callback_data="course:39"
+    )
+)
+year3_sem1_is_markup.row(
+    InlineKeyboardButton(
+        "🏗️ System Analysis and Design",
+        callback_data="course:40"
+    )
+)
+year3_sem1_is_markup.row(
+    InlineKeyboardButton(
+        "🗄️ Advanced Database",
+        callback_data="course:41"
+    )
+)
+year3_sem1_is_markup.row(
+    InlineKeyboardButton(
+        "📊 Business Intelligent System",
+        callback_data="course:42"
+    )
+)
+year3_sem1_is_markup.row(
+    InlineKeyboardButton(
+        "🧠 Decision Support System",
+        callback_data="course:43"
+    )
+)
+
+year3_sem1_is_markup.row(
+    InlineKeyboardButton(
+        "القائمة الرئيسية 🔝",
+        callback_data="home",
+        style="primary"
+    ),
+    InlineKeyboardButton(
+        "رجوع 🔙",
+        callback_data="dept:is",
+        style="primary"
+    )
+)
+
+#===============
+# Year 3 Semester 2 CS Department
+year3_sem2_cs_markup = InlineKeyboardMarkup()
+year3_sem2_cs_markup.row(
+    InlineKeyboardButton(
+        "🧠 Deep Learning",
+        callback_data="course:44"
+    )
+)
+year3_sem2_cs_markup.row(
+    InlineKeyboardButton(
+        "🩺 Biomedical Informatics",
+        callback_data="course:46"
+    )
+)
+year3_sem2_cs_markup.row(
+    InlineKeyboardButton(
+        "🧬 Bioinformatics",
+        callback_data="course:47"
+    )
+)
+year3_sem2_cs_markup.row(
+    InlineKeyboardButton(
+        "🖥️ Human Computer Interaction",
+        callback_data="course:48"
+    )
+)
+year3_sem2_cs_markup.row(
+    InlineKeyboardButton(
+        "القائمة الرئيسية 🔝",
+        callback_data="home",
+        style="primary"
+    ),
+    InlineKeyboardButton(
+        "رجوع 🔙",
+        callback_data="dept:cs",
+        style="primary"
+    )
+)
+
+#===============
+# Year 3 Semester 2 IT Department
+year3_sem2_it_markup = InlineKeyboardMarkup()
+year3_sem2_it_markup.row(
+    InlineKeyboardButton(
+        "🌐 Network Analysis",
+        callback_data="course:49"
+    )
+)
+year3_sem2_it_markup.row(
+    InlineKeyboardButton(
+        "🖼️ Digital Image Processing",
+        callback_data="course:50"
+    )
+)
+year3_sem2_it_markup.row(
+    InlineKeyboardButton(
+        "🔌 Network Programming",
+        callback_data="course:51"
+    )
+)
+year3_sem2_it_markup.row(
+    InlineKeyboardButton(
+        "🔐 Cryptography",
+        callback_data="course:52"
+    )
+)
+year3_sem2_it_markup.row(
+    InlineKeyboardButton(
+        "القائمة الرئيسية 🔝",
+        callback_data="home",
+        style="primary"
+    ),
+    InlineKeyboardButton(
+        "رجوع 🔙",
+        callback_data="dept:it",
+        style="primary"
+    )
+)
+
+#===============
+# Year 3 Semester 2 IS Department
+year3_sem2_is_markup = InlineKeyboardMarkup()
+year3_sem2_is_markup.row(
+    InlineKeyboardButton(
+        "📊 Data Visualization",
+        callback_data="course:53"
+    )
+)
+year3_sem2_is_markup.row(
+    InlineKeyboardButton(
+        "🔍 Information Storage and Retrieval",
+        callback_data="course:54"
+    )
+)
+year3_sem2_is_markup.row(
+    InlineKeyboardButton(
+        "⛏️ Data Mining",
+        callback_data="course:55"
+    )
+)
+year3_sem2_is_markup.row(
+    InlineKeyboardButton(
+        "🏭 Data Warehouse",
+        callback_data="course:56"
+    )
+)
+
+year3_sem2_is_markup.row(
+    InlineKeyboardButton(
+        "القائمة الرئيسية 🔝",
+        callback_data="home",
+        style="primary"
+    ),
+    InlineKeyboardButton(
+        "رجوع 🔙",
+        callback_data="dept:is",
+        style="primary"
+    )
+)

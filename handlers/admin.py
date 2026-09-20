@@ -28,7 +28,8 @@ async def admin_help(message: Message):
             "<code>/get_file (FileID)</code> - Sends a file from a given ID.\n"
             "<code>/add_resource (CourseID)|(Title)|(URL)</code> - Adds a new resource to the database.\n"
             "<code>/add_course (Course Name)|(Year)|(Semester)|(Department)</code> - Adds a new course to the database.\n"
-            "<code>/get_courses [Year] [Semester]</code> - Gets courses in the database.\n"
+            "<code>/remove_course (CourseID)</code> - Removes a course from the database.\n"
+            "<code>/get_courses [Year] [Semester] [Department]</code> - Gets courses in the database.\n"
             "<code>/get_materials [CourseID] [Type]</code> - Gets materials in the database.\n"
             "<code>/get_resources [CourseID]</code> - Gets resources in the database.\n"
             "<code>/id</code> - Gets the current chat ID."
@@ -91,7 +92,7 @@ async def handle_admin_upload(message: Message):
             await bot.reply_to(message, "Got it! ✅\nMaterial added successfully.")
 
         except Exception:
-            username = message.from_user.username if message.from_user.username else message.from_user.full_name
+            username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
             logger.error(
                 "Admin upload failed: userID=%s username=%s course_id=%s content_type=%s file_id=%s",
                 message.from_user.id,
@@ -118,7 +119,7 @@ async def handle_admin_upload(message: Message):
 async def enable_admin_upload(message: Message):
     """Enables the admin upload material state"""
     state = user_states.setdefault(message.from_user.id, UserState())
-    username = message.from_user.username if message.from_user.username else message.from_user.full_name
+    username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
     if isadmin(message.from_user.id):
         if state.awaiting == "admin_upload":
             state.awaiting = None
@@ -166,7 +167,7 @@ async def end_admin_upload(call: CallbackQuery):
             call.message.id,
             parse_mode="Markdown"
         )
-        username = call.from_user.username if call.from_user.username else call.from_user.full_name
+        username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
         logger.info(f"User {call.from_user.id}({username}) disabled admin upload state.")
         await log_to_group(f"User {call.from_user.id}({username}) disabled admin upload state.")
 
@@ -196,7 +197,7 @@ async def add_resource(message: Message):
         try:
             await database.add_resource(course_id, title, url)
             await log_to_group(f"Added a new resource with: course_id={course_id}, title={title}, url={url}")
-            await bot.reply_to(message, "Resource added successfully.")
+            await bot.reply_to(message, "Resource added successfully. ✅")
 
         except Exception as e:
             logger.error(f"Failed to add resource: {e}")
@@ -227,12 +228,12 @@ async def add_course(message: Message):
         course_name = args[0].strip()
         year = int(args[1])
         sem = int(args[2])
-        dept = args[3].strip() if len(args) == 4 else None
+        dept = args[3].strip().upper() if len(args) == 4 else None
         
         try:
             await database.add_course(course_name, year, sem, dept)
             await log_to_group(f"Added a new course with: name={course_name}, year={year}, semester={sem}, department={dept}")
-            await bot.reply_to(message, "Course added successfully.")
+            await bot.reply_to(message, "Course added successfully. ✅")
 
         except Exception as e:
             logger.error(f"Failed to add course: {e}")
@@ -241,11 +242,39 @@ async def add_course(message: Message):
 
 
 #===========
+@bot.message_handler(commands=['remove_course'])
+async def remove_course(message: Message):
+    """Removes a course from the database"""
+    if isadmin(message.from_user.id):
+        args = message.text.split(maxsplit=1)
+        if len(args) != 2:
+            return await bot.reply_to(
+                message,
+                "*Usage:*\n`/remove_course <CourseID>`",
+                parse_mode="Markdown"
+            )
+        
+        try:
+            course_id = int(args[1])
+            await database.remove_course(course_id)
+            await log_to_group(f"Removed course with ID: {course_id}")
+            await bot.reply_to(
+                message,
+                "Course removed successfully. ✅"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to remove course: {e}")
+            await log_to_group(f"Failed to remove course: {e}")
+            return await bot.reply_to(message, "❌ Failed to remove the course.")
+
+#===========
 @bot.message_handler(commands=['get_courses'])
 async def get_courses(message: Message):
     """Gets courses in the database"""
     if isadmin(message.from_user.id):
-        args = message.text.split(maxsplit=2)
+        args = message.text.split(maxsplit=3)
+        dept = None
         year = None
         semeseter = None
         if len(args) == 2:
@@ -255,9 +284,22 @@ async def get_courses(message: Message):
             year = int(args[1])
             semeseter = int(args[2])
         
+        elif len(args) == 4:
+            year = int(args[1])
+            semeseter = int(args[2])
+            dept = args[3].upper()
+        
         reply_msg = ""
-        if semeseter:
-            courses = await database.get_courses(year, semeseter) # courses = (id, name, year, sem, dept)
+        if dept:
+            courses = await database.get_courses(year, semeseter, dept) # courses = (id, name, year, sem, dept)
+            reply_msg += f"\n<b>Year {year}, Semester {semeseter}, Department {dept} Courses</b>\n<blockquote>"
+            for course in courses: 
+                reply_msg += f"<b>{course[1]}</b>\nID: {course[0]}\n\n"
+            
+            reply_msg += "</blockquote>"
+
+        elif semeseter:
+            courses = await database.get_courses(year, semeseter) 
             reply_msg += f"\n<b>Year {year}, Semester {semeseter} Courses</b>\n<blockquote>"
             for course in courses: 
                 reply_msg += f"<b>{course[1]}</b>\nID: {course[0]}\nDepartment: {course[4]}\n\n"

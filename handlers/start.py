@@ -47,9 +47,11 @@ async def semester_handler(call: CallbackQuery):
     semester = int(call.data.split(":")[1])
     state = user_states.setdefault(call.from_user.id, UserState())
     state.semester = semester
-
+    department = state.department
     year = state.year
-    username = call.from_user.username if call.from_user.username else call.from_user.full_name
+    username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
+    semester_text = "الأول" if semester == 1 else "الثاني"
+
     if year is None:
         logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, year not set.")
         return await bot.reply_to(
@@ -61,20 +63,41 @@ async def semester_handler(call: CallbackQuery):
     if year == 1:
         if semester == 1:
             markup = courses.year1_sem1_markup
-            semester_text = "الأول"
 
         elif semester == 2:
             markup = courses.year1_sem2_markup
-            semester_text = "الثاني"
      
     elif year == 2:
         if semester == 1:
             markup = courses.year2_sem1_markup
-            semester_text = "الأول"
 
         elif semester == 2:
             markup = courses.year2_sem2_markup
-            semester_text = "الثاني"
+
+    elif year == 3:
+        if department is None:
+            logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, department not set.")
+            return await bot.reply_to(
+                call.message,
+                f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+                parse_mode="Markdown"
+            )
+
+        if semester == 1:
+            if department == "cs":
+                markup = courses.year3_sem1_cs_markup
+            elif department == "it":
+                markup = courses.year3_sem1_it_markup
+            elif department == "is":
+                markup = courses.year3_sem1_is_markup
+
+        elif semester == 2:
+            if department == "cs":
+                markup = courses.year3_sem2_cs_markup
+            elif department == "it":
+                markup = courses.year3_sem2_it_markup
+            elif department == "is":
+                markup = courses.year3_sem2_is_markup
 
     else:
         markup = primary.back_markup
@@ -104,12 +127,21 @@ async def department_handler(call: CallbackQuery):
     dept = call.data.split(":")[1]
     state = user_states.setdefault(call.from_user.id, UserState())
     state.department = dept
+    year = state.year
+    username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
+    if year is None:
+        logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, year not set.")
+        return await bot.reply_to(
+            call.message,
+            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            parse_mode="Markdown"
+        )
 
     await bot.edit_message_text(
         f"لقد اخترت قسم *{dept.upper()}*\n---\nاختر الترم",
         call.message.chat.id,
         call.message.message_id,
-        reply_markup=primary.semester_markup,
+        reply_markup=primary.dept_semester_markup(year),
         parse_mode="Markdown"
     )
 
@@ -125,7 +157,7 @@ async def course_handler(call: CallbackQuery):
     state.course_id = course_id
 
     semester = state.semester
-    username = call.from_user.username if call.from_user.username else call.from_user.full_name
+    username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
     if semester is None:
         logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, semester not set.")
         return await bot.reply_to(
@@ -155,7 +187,7 @@ async def material_handler(call: CallbackQuery):
     state = user_states.setdefault(call.from_user.id, UserState())
 
     course_id = state.course_id
-    username = call.from_user.username if call.from_user.username else call.from_user.full_name
+    username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
     if course_id is None:
         logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, course id not set.")
         return await bot.reply_to(
@@ -169,7 +201,7 @@ async def material_handler(call: CallbackQuery):
     for material in materials:
         media_group.append(InputMediaDocument(material[4]))
 
-    username = call.from_user.username if call.from_user.username else call.from_user.full_name
+    username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
     if len(media_group) == 0:
         logger.info(f"Tried sending material of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({username}) but couldn't find any.")
         return await bot.edit_message_text(
@@ -195,7 +227,7 @@ async def material_handler(call: CallbackQuery):
         )
         await sleep(0.2)
 
-    username = call.from_user.username if call.from_user.username else call.from_user.full_name
+    username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
     logger.info(f"Sent materials of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({username})")
     await bot.send_message(
         call.message.chat.id,
@@ -214,7 +246,7 @@ async def resource_handler(call: CallbackQuery):
     state = user_states.setdefault(call.from_user.id, UserState)
 
     course_id = state.course_id
-    username = call.from_user.username if call.from_user.username else call.from_user.full_name
+    username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
     if course_id is None:
         logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, course id not set.")
         return await bot.reply_to(
@@ -248,6 +280,8 @@ async def resource_handler(call: CallbackQuery):
             reply_markup=markup,
             parse_mode="Markdown"
         )
+
+        logger.info(f"Sent resources for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({username})")
 
 
 #=====================
