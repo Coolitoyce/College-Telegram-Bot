@@ -56,7 +56,7 @@ async def semester_handler(call: CallbackQuery):
         logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, year not set.")
         return await bot.reply_to(
             call.message,
-            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            f"*خطأ!* ❌\nالقائمة دي انتهت صلاحيتها بسبب إعادة تشغيل البوت.\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
             parse_mode="Markdown"
         )
 
@@ -205,7 +205,7 @@ async def material_handler(call: CallbackQuery):
     if len(media_group) == 0:
         logger.info(f"Tried sending material of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({username}) but couldn't find any.")
         return await bot.edit_message_text(
-            "*مفيش ماتريال من النوع ده للمادة دي.* ❌",
+            "*مفيش ماتريال من النوع ده اتضافت للمادة دي.* ❌",
             call.message.chat.id,
             call.message.message_id,
             reply_markup=materials_kb.back_markup(course_id),

@@ -73,6 +73,7 @@ async def remove_course(course_id: int):
         logger.info(f"Removed course with ID: {course_id}")
         return True
 
+
 #=====================
 async def get_course_name(course_id: int):
     """Gets a course name from its ID"""
@@ -148,6 +149,22 @@ async def get_materials(course_id: int = None, material_type: str = None):
 
 
 #=====================
+async def remove_material(material_id: int):
+    """Removes a material from the database"""
+    async with aiosqlite.connect("database.db") as db:
+        cursor = await db.execute(
+            "DELETE FROM materials WHERE id = ?", (material_id,)
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            logger.warning(f"Attempted to remove material with ID: {material_id}, but it does not exist.")
+            return False
+
+        logger.info(f"Removed material with ID: {material_id}")
+        return True
+
+
+#=====================
 async def add_resource(course_id: int, title: str, url: str):
     """Adds a new resource to the database"""
     async with aiosqlite.connect("database.db") as db:
@@ -179,3 +196,16 @@ async def get_resources(course_id: int = None):
 
 
 #=====================
+async def remove_resource(resource_id: int):
+    """Removes a resource from the database"""
+    async with aiosqlite.connect("database.db") as db:
+        cursor = await db.execute(
+            "DELETE FROM resources WHERE id = ?", (resource_id,)
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            logger.warning(f"Attempted to remove resource with ID: {resource_id}, but it does not exist.")
+            return False
+
+        logger.info(f"Removed resource with ID: {resource_id}")
+        return True

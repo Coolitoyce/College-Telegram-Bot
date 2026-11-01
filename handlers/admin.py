@@ -29,9 +29,11 @@ async def admin_help(message: Message):
             "<code>/add_resource (CourseID)|(Title)|(URL)</code> - Adds a new resource to the database.\n"
             "<code>/add_course (Course Name)|(Year)|(Semester)|(Department)</code> - Adds a new course to the database.\n"
             "<code>/remove_course (CourseID)</code> - Removes a course from the database.\n"
+            "<code>/remove_resource (ResourceID)</code> - Removes a resource from the database.\n"
+            "<code>/remove_material (MaterialID)</code> - Removes a material from the database.\n"
             "<code>/get_courses [Year] [Semester] [Department]</code> - Gets courses in the database.\n"
-            "<code>/get_materials [CourseID] [Type]</code> - Gets materials in the database.\n"
-            "<code>/get_resources [CourseID]</code> - Gets resources in the database.\n"
+            "<code>/get_materials (CourseID) [Type]</code> - Gets materials in the database.\n"
+            "<code>/get_resources (CourseID)</code> - Gets resources in the database.\n"
             "<code>/id</code> - Gets the current chat ID."
             "</blockquote>"
         )
@@ -87,7 +89,7 @@ async def handle_admin_upload(message: Message):
 
         try:
             await database.add_material(course_id, file_name, material_type, file_id)
-            logger.info("Admin upload successful: userID=%s course_id=%s content_type=%s file_id=%s", message.from_user.id, course_id, message.content_type, file_id)
+            logger.info("Admin upload successful: userID=%s course_id=%s content_type=%s", message.from_user.id, course_id, message.content_type)
             await log_to_group(f"Added a new material with: course id={course_id}, file name={file_name}, material type={material_type}")
             await bot.reply_to(message, "Got it! ✅\nMaterial added successfully.")
 
@@ -269,6 +271,62 @@ async def remove_course(message: Message):
             return await bot.reply_to(message, "❌ Failed to remove the course.")
 
 #===========
+@bot.message_handler(commands=['remove_resource'])
+async def remove_resource(message: Message):
+    """Removes a resource from the database"""
+    if isadmin(message.from_user.id):
+        args = message.text.split(maxsplit=1)
+        if len(args) != 2:
+            return await bot.reply_to(
+                message,
+                "*Usage:*\n`/remove_resource <ResourceID>`",
+                parse_mode="Markdown"
+            )
+        
+        try:
+            resource_id = int(args[1])
+            await database.remove_resource(resource_id)
+            await log_to_group(f"Removed resource with ID: {resource_id}")
+            await bot.reply_to(
+                message,
+                "Resource removed successfully. ✅"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to remove resource: {e}")
+            await log_to_group(f"Failed to remove resource: {e}")
+            return await bot.reply_to(message, "❌ Failed to remove the course.")
+
+
+#===========
+@bot.message_handler(commands=['remove_material'])
+async def remove_material(message: Message):
+    """Removes a material from the database"""
+    if isadmin(message.from_user.id):
+        args = message.text.split(maxsplit=1)
+        if len(args) != 2:
+            return await bot.reply_to(
+                message,
+                "*Usage:*\n`/remove_material <MaterialID>`",
+                parse_mode="Markdown"
+            )
+        
+        try:
+            material_id = int(args[1])
+            await database.remove_material(material_id)
+            await log_to_group(f"Removed material with ID: {material_id}")
+            await bot.reply_to(
+                message,
+                "Material removed successfully. ✅"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to remove material: {e}")
+            await log_to_group(f"Failed to remove material: {e}")
+            return await bot.reply_to(message, "❌ Failed to remove the material.")
+
+
+#===========
 @bot.message_handler(commands=['get_courses'])
 async def get_courses(message: Message):
     """Gets courses in the database"""
@@ -329,7 +387,13 @@ async def get_courses(message: Message):
                 else:
                     reply_msg += "</blockquote>"
         
-        await bot.reply_to(message, reply_msg, parse_mode="HTML")
+        try:
+            await bot.reply_to(message, reply_msg, parse_mode="HTML")
+
+        except Exception as e:
+            logger.error(f"Failed to send courses list: {e}")
+            await log_to_group(f"Failed to send courses list: {e}")
+            await bot.reply_to(message, "❌ Failed to send the courses list.")
 
 
 #===========
@@ -339,12 +403,17 @@ async def get_materials(message: Message):
     if isadmin(message.from_user.id):
         args = message.text.split()
         course_id = None
+        material_type = None
+
         if len(args) == 3:
             course_id = int(args[1])
+            print(f"course id = {course_id}")
             material_type = args[2]
+            print(f"material_type id = {material_type}")
 
         elif len(args) == 2:
             course_id = int(args[1])
+            print(f"course id = {course_id}")
 
         reply_msg = ""
         if material_type:
@@ -364,6 +433,7 @@ async def get_materials(message: Message):
             reply_msg += "</blockquote>"
 
         else:
+            materials = await database.get_materials()
             max_course_id = -1
             for x in materials:
                 if x[1] > max_course_id:
@@ -382,7 +452,15 @@ async def get_materials(message: Message):
                 else:
                     reply_msg += "</blockquote>"
         
-        await bot.reply_to(message, reply_msg, parse_mode="HTML")
+        try:
+            await bot.reply_to(message, reply_msg, parse_mode="HTML")
+
+        except Exception as e:
+            logger.error(f"Failed to send materials list: {e}")
+            await log_to_group(f"Failed to send materials list: {e}")
+            await bot.reply_to(message, "❌ Failed to send the materials list.")
+
+            
 
 
 #===========
@@ -405,6 +483,7 @@ async def get_resources(message: Message):
             reply_msg += "</blockquote>"
 
         else:
+            resources = await database.get_resources()
             max_course_id = -1
             for x in resources:
                 if x[1] > max_course_id:
@@ -423,7 +502,13 @@ async def get_resources(message: Message):
                 else:
                     reply_msg += "</blockquote>"
         
-        await bot.reply_to(message, reply_msg, parse_mode="HTML")
+        try:
+            await bot.reply_to(message, reply_msg, parse_mode="HTML")
+
+        except Exception as e:
+            logger.error(f"Failed to send resources list: {e}")
+            await log_to_group(f"Failed to send resources list: {e}")
+            await bot.reply_to(message, "❌ Failed to send the resources list.")
 
 
 #===========
