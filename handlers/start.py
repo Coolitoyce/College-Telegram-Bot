@@ -1,5 +1,5 @@
 from config import bot, UserState, user_states, log_to_group 
-from telebot.types import CallbackQuery, InputMediaDocument
+from telebot.types import CallbackQuery, InputMediaDocument, InputMediaPhoto, InputMediaVideo
 from keyboards import courses, materials as materials_kb, primary
 import logging
 import database
@@ -196,10 +196,17 @@ async def material_handler(call: CallbackQuery):
             parse_mode="Markdown"
         )
 
-    materials = await database.get_materials(course_id, material_type) # materials (id, course_id, title, type, file_id, uploaded_at)
-    media_group = []
+    materials = await database.get_materials(course_id, material_type) # materials (id, course_id, title, type, file_id, uploaded_at, media)
+    # Telegram can't mix documents with photos/videos in one album, so send them separately
+    documents, visuals = [], []
     for material in materials:
-        media_group.append(InputMediaDocument(material[4]))
+        if material[6] == "photo":
+            visuals.append(InputMediaPhoto(material[4]))
+        elif material[6] == "video":
+            visuals.append(InputMediaVideo(material[4]))
+        else:
+            documents.append(InputMediaDocument(material[4]))
+    media_group = documents + visuals
 
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
     if len(media_group) == 0:
@@ -220,12 +227,13 @@ async def material_handler(call: CallbackQuery):
             parse_mode="Markdown"
         )
         
-    for i in range(0, len(media_group), 10):
-        await bot.send_media_group(
-            call.message.chat.id,
-            media_group[i:i+10]
-        )
-        await sleep(0.2)
+    for group in (documents, visuals):
+        for i in range(0, len(group), 10):
+            await bot.send_media_group(
+                call.message.chat.id,
+                group[i:i+10]
+            )
+            await sleep(0.2)
 
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
     logger.info(f"Sent materials of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({username})")
@@ -243,7 +251,7 @@ async def material_handler(call: CallbackQuery):
 async def resource_handler(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
 
-    state = user_states.setdefault(call.from_user.id, UserState)
+    state = user_states.setdefault(call.from_user.id, UserState())
 
     course_id = state.course_id
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name

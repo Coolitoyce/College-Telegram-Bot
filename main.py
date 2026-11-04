@@ -1,12 +1,14 @@
 import telebot
 import asyncio
 import logging
-from telebot.types import Message, ReplyKeyboardMarkup, KeyboardButton, LinkPreviewOptions
+from telebot.types import Message, ReplyKeyboardMarkup, KeyboardButton, LinkPreviewOptions, InputMediaDocument
 #=====
 import database
 from keyboards import primary
 from config import bot, COLLEGE_FILE_IDS, TUTORIAL_VIDEO, user_states, UserState
 from handlers.admin import *
+from handlers.admin_panel import handle_admin_upload # also registers /admin, /add_material, /cancel
+import handlers.picker, handlers.review # register the picker & review callbacks
 from handlers.start import *
 from handlers.contribute import *
 #=====================

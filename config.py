@@ -3,7 +3,7 @@ from os import getenv
 from telebot.async_telebot import AsyncTeleBot
 from telebot.types import Message
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 #===========
 # Load Environment eariables
@@ -24,6 +24,17 @@ COLLEGE_FILE_IDS = [ # فايلات اللائحة
     for x in getenv("COLLEGE_FILES", "").split(",")
     if x.strip()
 ]
+#===========
+# Material types (must match the callback data in keyboards/materials.py)
+MATERIAL_TYPES = {
+    "book": "📘 Book",
+    "lecture": "📚 Lectures",
+    "section": "👥 Sections",
+    "summary": "📝 Summaries",
+    "exam": "📋 Exams",
+    "practical": "💻 Practical",
+}
+
 #===========
 # Logging
 logger = logging.getLogger("coolig_bot")
@@ -51,6 +62,12 @@ class UserState:
     # available states: ("doc", "link", "desc", "admin_upload")
     pending_message: Message | None = None # the pending operation message
     sent_files: int = 0 # number of files sent by the user when contributing
+    batch_id: int | None = None # current contribution batch (files + description)
+    # Admin only
+    upload_target: tuple[int, str] | None = None # (course_id, material_type) for upload mode
+    uploaded_files: int = 0 # files added in the current upload session
+    last_target: tuple[int, str] | None = None # last course/type the admin picked (quick button)
+    admin_input: dict | None = None # pending text input for the admin (rename, titles, ...)
 
 
 user_states: dict[int, UserState] = {}

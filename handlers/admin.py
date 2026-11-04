@@ -1,5 +1,5 @@
-from config import bot, log_to_group, ADMIN_ID, UserState, user_states
-from telebot.types import Message, CallbackQuery,InlineKeyboardMarkup, InlineKeyboardButton
+from config import bot, log_to_group, ADMIN_ID
+from telebot.types import Message
 import logging
 import database
 #===========
@@ -21,10 +21,12 @@ async def admin_help(message: Message):
         help_text = (
             "<b>Admin Commands:</b>\n\n"
             "<blockquote>"
+            "<code>/admin</code> - Opens the admin panel (browse, rename, move, delete, upload).\n"
             "<code>/admin_help</code> - Shows this help message.\n"
             "<code>/userinfo</code> - Gets the current user's info.\n"
             "<code>/chatinfo</code> - Gets the current chat's info.\n"
-            "<code>/add_material</code> - Enables the admin upload material state.\n"
+            "<code>/add_material [CourseID] [Type]</code> - Starts/ends upload mode (no args = choose with buttons).\n"
+            "<code>/cancel</code> - Cancels a pending admin text input.\n"
             "<code>/get_file (FileID)</code> - Sends a file from a given ID.\n"
             "<code>/add_resource (CourseID)|(Title)|(URL)</code> - Adds a new resource to the database.\n"
             "<code>/add_course (Course Name)|(Year)|(Semester)|(Department)</code> - Adds a new course to the database.\n"
@@ -60,118 +62,6 @@ async def get_file(message: Message):
         except Exception:
             logger.exception("Failed to send document file_id=%s user_id=%s chat_id=%s", file_id, message.from_user.id, message.chat.id)
             return await bot.reply_to(message, "A file with that ID doesn't exist.")
-
-
-#===========
-# Handle admin upload of materials
-async def handle_admin_upload(message: Message):
-    """Adds a new material to the database"""
-    if message.content_type == "video":
-        file_id = message.video.file_id
-        file_name = message.video.file_name
-    elif message.content_type == "photo":
-        file_id = message.photo[-1].file_id
-        file_name = "Photo"           
-    else:
-        file_id = message.document.file_id
-        file_name = message.document.file_name
-
-    if message.caption is not None:
-        args = message.caption.strip().split(sep='|')
-        if len(args) != 2:
-            return await bot.reply_to(
-                message,
-                "❌ *Incorrect Arguments*\n*Usage:*\n`<CourseID>|<Type>`",
-                parse_mode="Markdown"
-            )
-        course_id = int(args[0])
-        material_type = args[1].lower() 
-
-        try:
-            await database.add_material(course_id, file_name, material_type, file_id)
-            logger.info("Admin upload successful: userID=%s course_id=%s content_type=%s", message.from_user.id, course_id, message.content_type)
-            await log_to_group(f"Added a new material with: course id={course_id}, file name={file_name}, material type={material_type}")
-            await bot.reply_to(message, "Got it! ✅\nMaterial added successfully.")
-
-        except Exception:
-            username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-            logger.error(
-                "Admin upload failed: userID=%s username=%s course_id=%s content_type=%s file_id=%s",
-                message.from_user.id,
-                username,
-                course_id,
-                message.content_type,
-                file_id,
-                exc_info=True
-            )
-            await log_to_group(f"Admin upload failed: user={message.from_user.id} username={username} course_id={course_id} content_type={message.content_type} file_id={file_id}")
-            return await bot.reply_to(message, "❌ Failed to add material.")
-
-    else:
-        return await bot.reply_to(
-            message,
-            "❌ *Missing Caption*\n*Usage:*\n`<CourseID>|<Type>`",
-            parse_mode="Markdown"
-        )
-
-
-#===========
-# Handle enabling admin upload material state
-@bot.message_handler(commands=['add_material'])
-async def enable_admin_upload(message: Message):
-    """Enables the admin upload material state"""
-    state = user_states.setdefault(message.from_user.id, UserState())
-    username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-    if isadmin(message.from_user.id):
-        if state.awaiting == "admin_upload":
-            state.awaiting = None
-            await bot.reply_to(
-                message,
-                "*Admin Upload Material State Disabled* ❌",
-                parse_mode="Markdown"
-            )
-            logger.info(f"User {message.from_user.id}({username}) disabled admin upload state.")
-            await log_to_group(f"User {message.from_user.id}({username}) disabled admin upload state.")
-
-        else:
-            state.awaiting = "admin_upload"
-            markup = InlineKeyboardMarkup()
-            markup.row(
-                InlineKeyboardButton(
-                    "End ❌",
-                    callback_data="end_admin_upload",
-                    style="primary"
-                )
-            )
-
-            await bot.reply_to(
-                message,
-                "*Admin Upload Material State Enabled*\n\nNow you can send a file with the caption `<CourseID>|<Type>` to add a new material to the database.",
-                reply_markup=markup,
-                parse_mode="Markdown"
-            )
-            logger.info(f"User {message.from_user.id}({username}) enabled admin upload state.")
-            await log_to_group(f"User {message.from_user.id}({username}) enabled admin upload state.")
-
-
-#===========
-# Handle disabling admin upload material state
-@bot.callback_query_handler(func=lambda c: c.data == "end_admin_upload")
-async def end_admin_upload(call: CallbackQuery):
-    await bot.answer_callback_query(call.id)
-    state = user_states.setdefault(call.from_user.id, UserState())
-
-    if isadmin(call.from_user.id):
-        state.awaiting = None
-        await bot.edit_message_text(
-            "*Admin Upload Material State Disabled* ❌",
-            call.message.chat.id,
-            call.message.id,
-            parse_mode="Markdown"
-        )
-        username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
-        logger.info(f"User {call.from_user.id}({username}) disabled admin upload state.")
-        await log_to_group(f"User {call.from_user.id}({username}) disabled admin upload state.")
 
 
 #===========

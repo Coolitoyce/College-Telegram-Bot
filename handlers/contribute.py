@@ -1,4 +1,6 @@
-from config import bot, log_to_group, ADMIN_GROUP, UserState, user_states
+from config import bot, log_to_group, UserState, user_states
+import database
+from handlers import review
 from telebot.types import Message, CallbackQuery, ReactionTypeEmoji
 import logging
 from keyboards.primary import contribute_markup, cancel_contribute_markup, end_contribute_markup, description_markup, cancel_desc_markup
@@ -34,6 +36,8 @@ async def handle_contribute_call(call: CallbackQuery):
     if option == "doc":
         state.awaiting = "doc"
         state.pending_message = call.message
+        state.sent_files = 0
+        state.batch_id = None # created when the first file arrives
         await bot.edit_message_text(
             "*في انتظارك حتى ترسل الفايلات...* ⌚\n*عند الانتهاء اضغط على انهاء ✅*",
             call.message.chat.id,
@@ -69,6 +73,12 @@ async def handle_end_contribute(call: CallbackQuery):
         )
 
         if state.sent_files > 0:
+            if state.batch_id:
+                try:
+                    await review.post_batch_card(state.batch_id)
+                except Exception:
+                    logger.exception(f"Failed to post batch card for batch {state.batch_id}")
+
             reply_msg = (
                 "<b>تم استلام الفايلات بنجاح!</b> ✅\n\n"
                 "هيتم مراجعة الفايلات وفي حالة التأكد هتتضاف للبوت.\n"
@@ -104,11 +114,15 @@ async def handle_file_contribute(message: Message):
         message.id,
         [ReactionTypeEmoji("❤️")],
     )
-    await bot.forward_message(
-        ADMIN_GROUP,
-        message.chat.id,
-        message.id,
-    )
+    username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
+    try:
+        if state.batch_id is None:
+            state.batch_id = await database.create_batch(message.from_user.id, username)
+        await review.post_file_contribution(message, state.batch_id)
+    except Exception:
+        logger.exception(f"Failed to post contribution from user {message.from_user.id}")
+        await log_to_group(f"⚠️ Failed to post a contribution from user {message.from_user.id}({username}), check the logs.")
+
     if message.content_type == "document":
         file_name = message.document.file_name
         file_id = message.document.file_id
@@ -121,7 +135,6 @@ async def handle_file_contribute(message: Message):
         file_name = message.video.file_name
         file_id = message.video.file_id
 
-    username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
     logger.info(
         f"User {message.from_user.id}({username}) sent {message.content_type} with name={file_name}, ID={file_id}"
     )
@@ -148,15 +161,15 @@ async def handle_link_contribute(message: Message):
                 parse_mode="Markdown"
             )
 
-            await bot.forward_message(
-                ADMIN_GROUP,
-                message.chat.id,
-                message.id
-            )
-
             username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
-            
+
             valid_links = [arg for arg in args if is_valid_url(arg)]
+            try:
+                await review.post_link_contribution(message, valid_links)
+            except Exception:
+                logger.exception(f"Failed to post link contribution from user {message.from_user.id}")
+                await log_to_group(f"⚠️ Failed to post a link contribution from user {message.from_user.id}({username}), check the logs.")
+
             if len(valid_links) > 1:
                 logger.info(f"User {message.from_user.id}({username}) sent multiple links: {valid_links}")
                 reply_msg = (
@@ -209,11 +222,11 @@ async def handle_description_contribute(message: Message):
             parse_mode="Markdown"
         )
 
-        await bot.forward_message(
-            ADMIN_GROUP,
-            message.chat.id,
-            message.id
-        )
+        try:
+            if state.batch_id:
+                await review.post_description(state.batch_id, message)
+        except Exception:
+            logger.exception(f"Failed to post description for batch {state.batch_id}")
 
         username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
         logger.info(f"User {message.from_user.id}({username}) sent a description for the contribution: {message.text}")
