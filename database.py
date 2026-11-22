@@ -43,6 +43,74 @@ async def ready_tables():
             )"""
         )
 
+        # User navigation is persisted separately from active workflows.
+        await db.execute(
+            """CREATE TABLE IF NOT EXISTS user_navigation (
+                user_id INTEGER PRIMARY KEY,
+                year INTEGER,
+                semester INTEGER,
+                department TEXT,
+                course_id INTEGER,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )"""
+        )
+
+        await db.commit()
+
+
+#=============================================================================
+# Persistent user navigation
+# Why: Telegram keeps old inline messages after a restart, so callbacks from
+# those messages need enough information to continue correctly.
+
+async def get_user_navigation(user_id: int):
+    """Loads the saved year, semester, department, and course for one Telegram user."""
+    async with aiosqlite.connect("database.db") as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            """SELECT year, semester, department, course_id
+               FROM user_navigation WHERE user_id = ?""",
+            (user_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+
+    if row:
+        return (
+            row["year"],
+            row["semester"],
+            row["department"],
+            row["course_id"]
+        )
+
+    return (None, None, None, None)
+
+
+async def save_user_navigation(user_id: int, year: int = None, semester: int = None,
+                              department: str = None, course_id: int = None):
+    """Saves or updates only the user's course-navigation choices."""
+    async with aiosqlite.connect("database.db") as db:
+        await db.execute(
+            """INSERT INTO user_navigation
+               (user_id, year, semester, department, course_id, updated_at)
+               VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT(user_id) DO UPDATE SET
+                   year = excluded.year,
+                   semester = excluded.semester,
+                   department = excluded.department,
+                   course_id = excluded.course_id,
+                   updated_at = CURRENT_TIMESTAMP""",
+            (user_id, year, semester, department, course_id)
+        )
+        await db.commit()
+
+
+async def clear_user_navigation(user_id: int):
+    """Removes all saved navigation selections for one Telegram user."""
+    async with aiosqlite.connect("database.db") as db:
+        await db.execute(
+            "DELETE FROM user_navigation WHERE user_id = ?",
+            (user_id,)
+        )
         await db.commit()
 
 

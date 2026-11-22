@@ -4,6 +4,7 @@ from keyboards import courses, materials as materials_kb, primary
 import logging
 import database
 from asyncio import sleep
+from state import get_navigation_state, save_navigation_state
 #=====================
 logger = logging.getLogger("coolig_bot")
 
@@ -14,8 +15,15 @@ async def year_handler(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
     
     year = int(call.data.split(":")[1])
-    state = user_states.setdefault(call.from_user.id, UserState())
+    state = await get_navigation_state(call.from_user.id)
+
+    # Changing a parent selection invalidates all child selections. This avoids
+    # an old semester/department/course remaining under a newly selected year.
     state.year = year
+    state.semester = None
+    state.department = None
+    state.course_id = None
+    await save_navigation_state(call.from_user.id, state)
 
     years = ["المستوى الأول", "المستوى الثاني", "المستوى الثالث", "المستوى الرابع"]
     year_text = years[year-1]
@@ -45,8 +53,13 @@ async def semester_handler(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
     
     semester = int(call.data.split(":")[1])
-    state = user_states.setdefault(call.from_user.id, UserState())
+    state = await get_navigation_state(call.from_user.id)
+
+    # Semester is below year in the menu hierarchy, so an old course must not
+    # remain associated with a new semester.
     state.semester = semester
+    state.course_id = None
+    await save_navigation_state(call.from_user.id, state)
     department = state.department
     year = state.year
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
@@ -125,8 +138,13 @@ async def department_handler(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
     
     dept = call.data.split(":")[1]
-    state = user_states.setdefault(call.from_user.id, UserState())
+    state = await get_navigation_state(call.from_user.id)
+
+    # Department choices invalidate the semester and course selected previously.
     state.department = dept
+    state.semester = None
+    state.course_id = None
+    await save_navigation_state(call.from_user.id, state)
     year = state.year
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
     if year is None:
@@ -153,8 +171,11 @@ async def course_handler(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
     
     course_id = int(call.data.split(":")[1])
-    state = user_states.setdefault(call.from_user.id, UserState())
+    state = await get_navigation_state(call.from_user.id)
+
+    # Course is the deepest navigation choice, so it can be saved by itself.
     state.course_id = course_id
+    await save_navigation_state(call.from_user.id, state)
 
     semester = state.semester
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
@@ -184,7 +205,10 @@ async def material_handler(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
     
     material_type = (call.data.split(":")[1])
-    state = user_states.setdefault(call.from_user.id, UserState())
+
+    # Load saved navigation because this callback may belong to an old menu
+    # that was already displayed before the bot restarted.
+    state = await get_navigation_state(call.from_user.id)
 
     course_id = state.course_id
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
@@ -244,7 +268,9 @@ async def material_handler(call: CallbackQuery):
 async def resource_handler(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
 
-    state = user_states.setdefault(call.from_user.id, UserState())
+    # Resources are linked to the course selected in a previous menu, including
+    # menus created before process restart.
+    state = await get_navigation_state(call.from_user.id)
 
     course_id = state.course_id
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
