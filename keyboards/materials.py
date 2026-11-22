@@ -1,6 +1,6 @@
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# material_types = ["lecture", "section", "summary", "practical", "exam", "book"]
+# material_types = ["lecture", "section", "summary", "practical", "exam", "book", "video"]
 #===============
 # Materials Keyboard
 def materials_markup(semester: int):

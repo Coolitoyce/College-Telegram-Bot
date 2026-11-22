@@ -48,7 +48,9 @@ class UserState:
     course_id: int | None = None
     material: str | None = None
     awaiting: str | None = None # for awaiting user action
-    # available states: ("doc", "link", "desc", "admin_upload")
+    # available states: ("doc", "link", "desc", "admin_upload", "bulk_upload")
+    bulk_course_id: int | None = None # Used by bulk admin uploads; shared by all uploaded files
+    bulk_material_type: str | None = None # Used together with bulk_course_id
     pending_message: Message | None = None # the pending operation message
     sent_files: int = 0 # number of files sent by the user when contributing
 

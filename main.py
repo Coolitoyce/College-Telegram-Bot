@@ -207,6 +207,11 @@ async def handle_files(message: Message):
     elif state.awaiting == "admin_upload":
         return await handle_admin_upload(message)
 
+    elif state.awaiting == "bulk_upload":
+        # Bulk mode uses the same file extraction/database action as /add_material,
+        # but handle_admin_upload reads the saved course/type instead of a caption.
+        return await handle_admin_upload(message)
+
     else:
         await bot.reply_to(
             message,

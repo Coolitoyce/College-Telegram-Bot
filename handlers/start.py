@@ -79,7 +79,7 @@ async def semester_handler(call: CallbackQuery):
             logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, department not set.")
             return await bot.reply_to(
                 call.message,
-                f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+                f"*خطأ!* ❌\nالقائمة دي انتهت صلاحيتها بسبب إعادة تشغيل البوت.\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
                 parse_mode="Markdown"
             )
 
@@ -133,7 +133,7 @@ async def department_handler(call: CallbackQuery):
         logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, year not set.")
         return await bot.reply_to(
             call.message,
-            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            f"*خطأ!* ❌\nالقائمة دي انتهت صلاحيتها بسبب إعادة تشغيل البوت.\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
             parse_mode="Markdown"
         )
 
@@ -162,7 +162,7 @@ async def course_handler(call: CallbackQuery):
         logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, semester not set.")
         return await bot.reply_to(
             call.message,
-            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            f"*خطأ!* ❌\nالقائمة دي انتهت صلاحيتها بسبب إعادة تشغيل البوت.\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
             parse_mode="Markdown"
         )
 
@@ -192,7 +192,7 @@ async def material_handler(call: CallbackQuery):
         logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, course id not set.")
         return await bot.reply_to(
             call.message,
-            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            f"*خطأ!* ❌\nالقائمة دي انتهت صلاحيتها بسبب إعادة تشغيل البوت.\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
             parse_mode="Markdown"
         )
 
@@ -229,6 +229,7 @@ async def material_handler(call: CallbackQuery):
 
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
     logger.info(f"Sent materials of type {material_type} for course {course_id}({await database.get_course_name(course_id)}) to user {call.from_user.id}({username})")
+
     await bot.send_message(
         call.message.chat.id,
         "*What next?*",
@@ -243,7 +244,7 @@ async def material_handler(call: CallbackQuery):
 async def resource_handler(call: CallbackQuery):
     await bot.answer_callback_query(call.id)
 
-    state = user_states.setdefault(call.from_user.id, UserState)
+    state = user_states.setdefault(call.from_user.id, UserState())
 
     course_id = state.course_id
     username = f"@{call.from_user.username}" if call.from_user.username else call.from_user.full_name
@@ -251,7 +252,7 @@ async def resource_handler(call: CallbackQuery):
         logger.error(f"Error: User {call.from_user.id}({username}) tried to access an old menu, course id not set.")
         return await bot.reply_to(
             call.message,
-            f"*خطأ!* ❌\nيبدو أنك تحاول الوصول إلى قائمة قديمة\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
+            f"*خطأ!* ❌\nالقائمة دي انتهت صلاحيتها بسبب إعادة تشغيل البوت.\nاعمل واحدة جديدة من */start* أو اضغط على *القائمة الرئيسية* 🔝",
             parse_mode="Markdown"
         )
 
@@ -263,7 +264,7 @@ async def resource_handler(call: CallbackQuery):
     
     if len(clean_resources) == 0:
         await bot.edit_message_text(
-            "*مفيش فيديوهات للمادة دي.* ❌",
+            "*مفيش فيديوهات اتضافت للمادة دي.* ❌",
             call.message.chat.id,
             call.message.message_id,
             reply_markup=materials_kb.back_markup(course_id),
